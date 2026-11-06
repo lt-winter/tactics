@@ -94,4 +94,25 @@ static func run_all() -> void:
 
 	print("[PASS] Tái tạo chồng rút")
 	print("[PASS] Bảo toàn toàn bộ CardInstance")
+	_test_initial_hands(cards)
 	print("=== ALL GAME STATE TESTS PASSED ===")
+
+
+static func _test_initial_hands(cards: Array[CardInstance]) -> void:
+	var players: Array[Player] = [Player.new(1, "A", 4), Player.new(2, "B", 4), Player.new(3, "C", 4), Player.new(4, "D", 4)]
+	var state: GameState = GameState.new(cards, players)
+	var order: Array[int] = [1, 2, 3, 4]
+	assert(state.deal_initial_hands(4, order).valid)
+	for player: Player in players:
+		assert(player.get_hand_count() == 4)
+	assert(state.deck.get_draw_count() == cards.size() - 16)
+	assert(not state.deal_initial_hands(4, order).valid)
+	assert(state.validate_state())
+	var short_players: Array[Player] = [Player.new(1, "A", 4), Player.new(2, "B", 4)]
+	var short_cards: Array[CardInstance] = cards.slice(0, 3)
+	var short_state: GameState = GameState.new(short_cards, short_players)
+	var short_order: Array[int] = [1, 2]
+	assert(not short_state.deal_initial_hands(4, short_order).valid)
+	assert(short_state.deck.get_draw_count() == 3)
+	assert(short_players[0].hand.is_empty() and short_players[1].hand.is_empty())
+	print("[PASS] Opening deal, no redeal and insufficient-deck atomic rejection")

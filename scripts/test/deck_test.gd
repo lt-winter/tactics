@@ -125,4 +125,43 @@ static func run_all() -> void:
 		assert(final_ids.has(original_id))
 
 	print("[PASS] Bảo toàn toàn bộ lá bài")
+	_test_suit_formats(card_db)
 	print("=== ALL DECK TESTS PASSED ===")
+
+
+static func _test_suit_formats(card_db: CardDatabase) -> void:
+	var database: DeckDatabase = DeckDatabase.new(card_db)
+	var valid_suits: Array[Variant] = [0, 1.0, 2, 3, "spades", "hearts", "diamonds", "clubs"]
+	assert(_load_suit_fixture(database, valid_suits))
+	var cards: Array[CardInstance] = database.create_instances()
+	assert(cards.size() == 8)
+	for index: int in range(cards.size()):
+		assert(int(cards[index].suit) == index % 4)
+		assert(cards[index].rank == 7)
+		assert(cards[index].get_suit_name() == CardInstance.SUIT_NAMES[index % 4])
+		assert(cards[index].is_red() == (index % 4 in [1, 2]))
+	# Normalized entries retain the existing string-based public data format.
+	assert(database.entries[0]["suit"] == "spades")
+	assert(database.entries[1]["suit"] == "hearts")
+	var invalid_suits: Array[Variant] = [-1, 4, 0.5, true, false, null, "1", "joker", {}, []]
+	for invalid: Variant in invalid_suits:
+		var suit_values: Array[Variant] = [0, invalid]
+		assert(not _load_suit_fixture(database, suit_values))
+		assert(not database.get_errors().is_empty())
+		assert(database.get_card_count() == 0)
+		assert(database.create_instances().is_empty())
+	print("[PASS] Suit 0..3, legacy names, mixed data and invalid suit rejection")
+
+
+static func _load_suit_fixture(database: DeckDatabase, suits: Array[Variant]) -> bool:
+	var copies: Array[Dictionary] = []
+	for suit_value: Variant in suits:
+		copies.append({"suit": suit_value, "rank": 7})
+	var path: String = OS.get_temp_dir().path_join("tactics_suits_%d_%d.json" % [OS.get_process_id(), Time.get_ticks_usec()])
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	assert(file != null)
+	file.store_string(JSON.stringify({"deck_id": "suit_test", "cards": [{"card_id": "attack", "copies": copies}]}))
+	file.close()
+	var loaded: bool = database.load_from_file(path)
+	assert(DirAccess.remove_absolute(path) == OK)
+	return loaded

@@ -113,12 +113,9 @@ func load_from_file(path: String) -> bool:
 			var suit_value: Variant = copy_data.get("suit")
 			var rank_value: Variant = copy_data.get("rank")
 
-			if not (suit_value is String):
-				errors.append(copy_path + " có suit không hợp lệ.")
-				continue
-
-			if not CardInstance.is_valid_suit_name(suit_value):
-				errors.append(copy_path + " có chất sai: " + suit_value)
+			var suit_name: String = _parse_suit_name(suit_value)
+			if suit_name.is_empty():
+				errors.append(copy_path + " có suit không hợp lệ: dùng số nguyên 0..3 hoặc tên chất.")
 				continue
 			
 			if not (rank_value is int or rank_value is float):
@@ -139,7 +136,7 @@ func load_from_file(path: String) -> bool:
 
 			temporary.append({
 				"card_id": card_id,
-				"suit": suit_value,
+				"suit": suit_name,
 				"rank": rank_value
 			})
 
@@ -153,6 +150,19 @@ func load_from_file(path: String) -> bool:
 	entries = temporary
 	deck_id = root["deck_id"]
 	return true
+
+
+func _parse_suit_name(value: Variant) -> String:
+	if value is String:
+		return value if CardInstance.is_valid_suit_name(value) else ""
+	if not (value is int or value is float):
+		return ""
+	var number: float = float(value)
+	if not is_finite(number) or number != floor(number):
+		return ""
+	if number < CardInstance.Suit.SPADES or number > CardInstance.Suit.CLUBS:
+		return ""
+	return CardInstance.SUIT_NAMES[int(number)]
 
 
 func create_instances() -> Array[CardInstance]:

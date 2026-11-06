@@ -1,89 +1,89 @@
 
 {
   "cards": [
-	{
-	  "id": "attack",
-	  "name": "Tấn công",
-	  "category": "basic",
-	  "subcategory": "attack",
-	  "description": "Gây 1 sát thương lên mục tiêu trong tầm đánh.",
-	  "effects": [
-		{
-		  "effect_id": "deal_attack",
-		  "parameters": {
-			"damage": 1
-		  }
-		}
-	  ]
-	},
-	{
-	  "id": "dodge",
-	  "name": "Né tránh",
-	  "category": "basic",
-	  "subcategory": "defense",
-	  "description": "Vô hiệu hóa một đòn tấn công.",
-	  "effects": [
-		{
-		  "effect_id": "block_attack",
-		  "parameters": {}
-		}
-	  ]
-	},
-	{
-	  "id": "heal",
-	  "name": "Hồi máu",
-	  "category": "basic",
-	  "subcategory": "recovery",
-	  "description": "Hồi 1 HP, không vượt quá HP tối đa.",
-	  "effects": [
-		{
-		  "effect_id": "restore_hp",
-		  "parameters": {
-			"amount": 1
-		  }
-		}
-	  ]
-	},
-	{
-	  "id": "discard",
-	  "name": "Hủy bài",
-	  "category": "tool",
-	  "subcategory": "instant",
-	  "description": "Hủy một lá bài của người chơi khác.",
-	  "effects": [
-		{
-		  "effect_id": "discard",
-		  "parameters": {
-			"card_count": 1,
-			"target_zones": [
-			  "hand",
-			  "equipment",
+    {
+      "id": "attack",
+      "name": "Tấn công",
+      "category": "basic",
+      "subcategory": "attack",
+      "description": "Gây 1 sát thương lên mục tiêu trong tầm đánh.",
+      "effects": [
+        {
+          "effect_id": "deal_attack",
+          "parameters": {
+            "damage": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dodge",
+      "name": "Né tránh",
+      "category": "basic",
+      "subcategory": "defense",
+      "description": "Vô hiệu hóa một đòn tấn công.",
+      "effects": [
+        {
+          "effect_id": "block_attack",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "id": "heal",
+      "name": "Hồi máu",
+      "category": "basic",
+      "subcategory": "recovery",
+      "description": "Hồi 1 máu cho mục tiêu",
+      "effects": [
+        {
+          "effect_id": "restore_hp",
+          "parameters": {
+            "amount": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "discard",
+      "name": "Hủy bài",
+      "category": "tool",
+      "subcategory": "instant",
+      "description": "Hủy một lá bài của người chơi khác.",
+      "effects": [
+        {
+          "effect_id": "discard",
+          "parameters": {
+            "card_count": 1,
+            "target_zones": [
+              "hand",
+              "equipment",
               "judgment"
-			]
-		  }
-		}
-	  ]
-	},
-	{
-	  "id": "steal",
-	  "name": "Cướp bài",
-	  "category": "tool",
-	  "subcategory": "instant",
-	  "description": "Cướp một lá bài của người chơi khác trong tầm 1.",
-	  "effects": [
-		{
-		  "effect_id": "steal_card",
-		  "parameters": {
-			"card_count": 1,
-			"max_distance": 1,
-			"target_zones": [
-			  "hand",
-			  "equipment",
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "steal",
+      "name": "Cướp bài",
+      "category": "tool",
+      "subcategory": "instant",
+      "description": "Cướp một lá bài của người chơi khác trong tầm 1.",
+      "effects": [
+        {
+          "effect_id": "steal_card",
+          "parameters": {
+            "card_count": 1,
+            "max_distance": 1,
+            "target_zones": [
+              "hand",
+              "equipment",
               "judgment"
-			]
-		  }
-		}
-	  ]
-	}
+            ]
+          }
+        }
+      ]
+    }
   ]
 }

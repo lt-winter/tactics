@@ -5,6 +5,30 @@ extends RefCounted
 var players: Array[Player] = []
 var deck: Deck
 var zone_manager: CardZoneManager
+var opening_hands_dealt: bool = false
+
+
+func deal_initial_hands(count: int, order: Array[int]) -> ActionResult:
+	if opening_hands_dealt or count < 1 or order.size() != players.size() or players.is_empty():
+		return ActionResult.failure("Không thể chia lại bài đầu hoặc cấu hình không hợp lệ.")
+	var seen: Dictionary = {}
+	for player_id: int in order:
+		var player: Player = get_player(player_id)
+		if player == null or seen.has(player_id) or not player.is_alive():
+			return ActionResult.failure("Thứ tự chia bài không hợp lệ.")
+		if not player.hand.is_empty() or not player.equipment.is_empty() or not player.judgment.is_empty():
+			return ActionResult.failure("Chỉ chia bài đầu trên bàn mới.")
+		seen[player_id] = true
+	if deck.get_discard_count() > 0 or deck.get_draw_count() < count * order.size():
+		return ActionResult.failure("Bộ bài không đủ để chia %d lá cho mỗi người." % count)
+	if not zone_manager.validate_integrity():
+		return ActionResult.failure("Bộ bài không bảo toàn trước khi chia.")
+	for round_index: int in range(count):
+		for player_id: int in order:
+			var drawn: CardInstance = draw_card(player_id)
+			assert(drawn != null)
+	opening_hands_dealt = true
+	return ActionResult.success()
 
 
 func _init(

@@ -53,11 +53,7 @@ static func run_all() -> void:
 	var result: ActionResult = combat.start_game()
 	assert(result.valid)
 
-	# START -> JUDGMENT -> DRAW -> PLAY
-	for i in range(3):
-		result = combat.advance_phase()
-		assert(result.valid)
-
+	# Empty automatic phases now resolve inside start_game().
 	assert(turns.current_phase == TurnManager.Phase.PLAY)
 	assert(combat.executor.attacks_used == 0)
 
@@ -97,26 +93,24 @@ static func run_all() -> void:
 
 	print("[PASS] Damage Pipeline giảm sát thương")
 
-	# Sau khi phản ứng xong, chuyển Phase bình thường
+	# Resuming cannot implicitly end PLAY.
 	result = combat.advance_phase()
 
 	assert(result.valid)
-	assert(turns.current_phase == TurnManager.Phase.DISCARD)
+	assert(turns.current_phase == TurnManager.Phase.PLAY)
 	assert(combat.executor.attacks_used == 1)
 
 	print("[PASS] Mở khóa chuyển Phase")
 
-	# DISCARD -> END -> lượt tiếp theo
-	result = combat.advance_phase()
-	assert(result.valid)
-
-	result = combat.advance_phase()
+	# Explicitly end PLAY; empty DISCARD/END and the next draw are automatic.
+	result = combat.end_turn(1)
 	assert(result.valid)
 
 	var current_player: Player = turns.get_current_player()
 
 	assert(current_player != null)
 	assert(current_player.player_id == 2)
+	assert(turns.current_phase == TurnManager.Phase.PLAY)
 	assert(combat.executor.attacks_used == 0)
 
 	print("[PASS] Tự động reset bộ đếm Tấn công")

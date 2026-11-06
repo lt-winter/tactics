@@ -14,6 +14,17 @@ func has_pending_dying() -> bool:
 	return dying_player_id != 0
 
 
+func ensure_pending_dying() -> void:
+	# Adopt an existing DYING state when damage came from another engine API.
+	# Keep an active window until it is explicitly rescued or finalized.
+	if has_pending_dying():
+		return
+	for player: Player in game_state.players:
+		if player.is_dying():
+			dying_player_id = player.player_id
+			return
+
+
 func begin_dying(player_id: int) -> ActionResult:
 	if has_pending_dying():
 		return ActionResult.failure(
@@ -58,7 +69,7 @@ func rescue_player(
 	if rescuer == null or target == null:
 		return ActionResult.failure("Người chơi không tồn tại.")
 
-	if rescuer.is_eliminated() or rescuer.is_dying():
+	if not rescuer.is_alive() and not (rescuer_id == target_id and rescuer.is_dying()):
 		return ActionResult.failure(
 			"Người cứu không thể thực hiện hành động."
 		)

@@ -1,6 +1,8 @@
-# Tactics — Game Design Document (GDD v0.3 handoff)
+# Tactics — Game Design Document (Combat v0.5 / Prototype UI v0.2)
 
 **Status:** Working design handoff, consolidated 2026-11-06. This document preserves previously agreed direction, but is **not** a claim that every rule is fully specified or implemented.
+
+**Approved update, 2026-11-06:** counterclockwise seat order and automatic progression through phases without decisions are settled rules. Other items explicitly marked proposed/OPEN remain provisional.
 
 ## 1. Vision
 - Platform: Windows PC first.
@@ -15,7 +17,7 @@
 - Proposed MVP role set: **1 Sheriff, 2 Outlaws, 1 Renegade**; no Deputy at four players.
 - Sheriff role is public; other roles hidden until the applicable reveal rule is implemented.
 - Proposed Sheriff bonus: +1 maximum HP.
-- Initial hand: cards equal to starting maximum HP (design intention, not yet implemented).
+- Approved prototype opening: **4 cards for each of the four players**, dealt once before turns begin. **Every turn, including each player's first turn, includes the normal 2-card DRAW.** Human therefore enters the first PLAY with 6 cards; Bots hold 4 until their turn and then draw 2. This latest correction supersedes the earlier first-DRAW skip. A deck too small for the full opening deal is rejected before any card moves.
 - Match ends by role victory conditions, not simply by running out of cards.
 
 ## 3. Role objectives — provisional interpretation
@@ -26,25 +28,35 @@
 - Do not infer the final role/identity system from current `Player`: role storage is not implemented yet.
 
 ## 4. Turn structure
-Current engine phase enum: `START -> JUDGMENT -> DRAW -> PLAY -> DISCARD -> END -> next player`.
-- START: begin turn, reset per-turn counters.
-- JUDGMENT: resolve delayed effects (planned; no complete judgment mechanics yet).
-- DRAW: default draw 2 cards.
-- PLAY: play legal cards and open reaction windows.
-- DISCARD: hand limit normally equals current HP; automatic/interactive discard behavior is not complete.
-- END: end-of-turn effects, move to next eligible player.
-- **Open decision:** handling of zero HP / current-turn elimination mid-turn and timing of triggered abilities.
+Phase enum remains `START -> JUDGMENT -> DRAW -> PLAY -> DISCARD -> END -> next player`.
+- **Confirmed counterclockwise seat order:** Human below, Bot 1 right, Bot 2 above, Bot 3 left; turns follow **Human -> Bot 1 -> Bot 2 -> Bot 3 -> Human**. The latest user correction swaps Bot 1 and Bot 3 positions so this sequence is geometrically counterclockwise on screen. Engine seat IDs determine the order independently of nodes. ELIMINATED players are skipped, including when the current actor is eliminated during a turn.
+- **Settled rule 2 — automatic phases:** phases without an effect, reaction, or decision advance automatically. Normal play never requires Next Phase clicks for empty START/JUDGMENT/END or the standard DRAW.
+- START: reset per-turn counters when an eligible player's turn starts.
+- JUDGMENT: skip only when empty. A nonempty judgment zone currently stops with an unsupported-effect message; its effects are not silently discarded or resolved.
+- DRAW: draw the default 2 cards through GameState on **every** turn, including the first, then stop at PLAY. Drawing only the available cards when the deck is exhausted retains existing engine behavior. Resume at PLAY does not draw again.
+- Vietnamese phase display: START = Giai đoạn bắt đầu; JUDGMENT = Giai đoạn phán xét; DRAW = Giai đoạn rút bài; PLAY = Giai đoạn sử dụng bài; DISCARD = Giai đoạn bỏ bài; END = Giai đoạn kết thúc. Internal enum names and ordering remain unchanged.
+- PLAY: always waits for actions or an explicit valid **Kết thúc lượt / end_turn(actor_id)** request. Auto-advance never ends Human PLAY; Bots also wait for manual debug control until AI exists.
+- DISCARD: normally limit = current HP, resolved through RuleEngine including modifiers. Stop only if cards must be selected, a rule is unavailable, or an effect needs resolution. The current actor chooses one owned hand card at a time; the engine validates and moves it. No automatic selection/card loss. Once within the limit, continue automatically.
+- END: advance to the next eligible counterclockwise seat, then process its empty phases through PLAY. No eligible seat means a safe stopped state, **not** a newly invented win condition.
+- Priority is **Dying Window -> Attack Response -> normal actions/phases**. A pending attack cannot consume Dodge or resolve damage while anyone is DYING; rescue resumes the response, while elimination of its target closes the stale attack without spending Dodge. Both windows block phase transitions, end-turn/discard requests and auto-advance, including direct TurnManager calls. DYING seats still count for distance.
+- Unsupported effects/choices stop with a reason. Auto-advance has a hard maximum of 32 transitions per invocation and stops on lack of progress; it never loops through PLAY unattended.
+- **OPEN:** triggered ability timing and role-based victory remain undefined. The current-player elimination transition is now implemented as skipping that eliminated seat once pending windows are resolved.
 
 ## 5. Combat and distance
 - Base attack range: 1 seat.
 - Base limit: one attack card per turn.
 - Circular distance = minimum clockwise/counterclockwise seat separation among participants who still occupy seats.
 - `ELIMINATED` players are removed from distance counting.
-- `DYING` players still occupy their seats until elimination; they cannot normally act.
+- `DYING` players still occupy their seats until elimination; their only supported card action is using their own healing card to rescue themselves.
 - Attack opens a response window. A valid Dodge cancels the attack; otherwise damage enters DamagePipeline.
+- Healing-card use: a living, wounded player may use their own `restore_hp` card during their own PLAY to heal themselves by the JSON `amount`, capped at max HP. It consumes exactly one card on success; full HP, wrong turn/phase/ownership, unresolved effects and Attack/Dying windows reject without cost. During Dying, the separate paid-rescue action below takes priority over normal healing.
+- Prototype manual controls: the lower hand follows the current actor, explicitly marked DEBUG for Bots. Select a card and any required target, then **Đồng ý** to use it (or discard it during DISCARD); **Huỷ bỏ** clears the selection without cost. Attack responses retain their separate target Dodge confirmation and explicit **Không Né** choice. The debug hand display is not a final hidden-information/AI policy.
+- Interaction: select an Attack and a target, then submit. Range/turn/ownership/limits are validated before consuming the Attack. The target's response overlay shows only their Dodge cards; selecting one does not spend it. **Đồng ý** submits that specific Dodge; **Không Né** explicitly declines. Bots remain manually controlled in the prototype.
+- Discard/Steal interaction: select the tool and another player, then choose one **face-down** card from the JSON-allowed zones and confirm. No name, suit or rank is shown on these backs. Cancelling costs nothing. Commit revalidates ownership/phase/windows/range and the chosen card, discards the played tool, and discards the victim card or transfers it into the actor's hand. Current JSON supports one chosen card; Steal has max distance 1, Discard has no max-distance parameter. There is no additional invented response or counter-tool rule.
 - Damage modifiers may reduce/increase/cancel damage before HP is changed.
-- Reaching 0 HP enters DYING. Rescue must be resolved before normal play resumes; unresolved DYING becomes ELIMINATED.
-- Rescue card payment, rescue order, and timing are **not yet implemented**. Existing `rescue_player(..., heal_amount)` is a simulation API only.
+- Damage that leaves HP at 0 or below enters DYING and **preserves negative HP**. The player remains DYING until HP is **strictly above 0**: at -1, two uses of a +1 healing card produce -1 -> 0 -> 1. Partial rescue consumes the used card but does not close the window or resume normal actions/phases.
+- The DYING player may use their own healing cards, or any other living player may use their owned healing card to rescue them, regardless of whose turn it is. Each confirmed use consumes exactly one selected card and applies its JSON amount. Wrong owner/type/target, spent or missing cards, eliminated rescuers and another DYING rescuer are rejected without payment. A blocking modal lets the operator select rescuer and card, confirm each use, or explicitly choose no rescue to finalize elimination. No automatic card selection, timeout, rescue-order protocol or AI policy is introduced.
+- Card faces show only name and rank/suit. Full descriptions and selection messages read the `description` field in `data/cards.json`; gameplay values remain in effect `parameters`. Editing descriptive text does not change effect values.
 
 ## 6. Rule override precedence — agreed
 Priority is **source-based**, not an arbitrary 0–3 level:
@@ -80,7 +92,7 @@ Current `RuleModifier` operations: `set`, `remove_limit`. Additional operations 
 - `discard` / `discard`
 - `steal` / `steal_card`
 
-`data/decks/standard.json` contains **12 instances**: 4 attack, 3 dodge, 2 heal, 1 discard, 2 steal. This is an **engine test deck**, not the planned 48-card MVP deck.
+`data/decks/standard.json` now contains the user's **34 instances**: 16 attack, 7 dodge, 7 heal, 2 discard, 2 steal, with numeric suit codes 0=spades, 1=hearts, 2=diamonds, 3=clubs. It was expanded by the user from the earlier 12-card engine test deck; it is not a final approved 48-card MVP distribution. The implementation preserves these quantities, suits, ranks and order.
 
 **Mapping warning:** Planned 'Do thám' does not have an agreed one-to-one mapping to implemented `discard`. Do not silently rename or conflate them.
 
@@ -117,7 +129,7 @@ Do not let bots access hidden roles or unseen hands unless explicitly allowed by
 ## 11. Unresolved design decisions
 - Final 48-card composition and precise semantics of Do thám / Hủy bài.
 - Role reveal timing and win-resolution edge cases.
-- Rescue order, who may rescue, Bia consumption, self-rescue conditions.
+- Ordered pass/timing protocol for multiple potential rescuers; eligibility, one-card payment and self-rescue are now implemented as specified above.
 - Equipment slots, weapon range, armor timing and duration.
 - Judgment/delayed card semantics.
 - Character ability wording, limits and trigger priority.

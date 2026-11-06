@@ -24,9 +24,9 @@ func deal_damage(
 	if amount <= 0:
 		return false
 
-	target.hp = maxi(0, target.hp - amount)
+	target.hp -= amount
 
-	if target.hp == 0:
+	if target.hp <= 0:
 		target.enter_dying()
 
 	return true

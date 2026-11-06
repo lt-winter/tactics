@@ -4,14 +4,206 @@
 **Evidence standard:** implemented behavior, executed tests, and future work are recorded separately. A zero Godot process exit code alone does not establish a test pass.
 
 ## Current snapshot
+- Latest paid-rescue rule: **negative HP is preserved; self or another living player can spend an owned healing card to rescue the active DYING target**. Each use consumes one card; at -1, two +1 uses reach 0 then 1. Dying priority remains until HP > 0. This supersedes earlier simulation-only/clamped-HP records below. Card descriptions and selection text use `data/cards.json`.
+- Latest Dying/UI correction: **Dying -> Attack Response -> normal actions/phases**. Existing DYING states are adopted at guard/controller boundaries, and a blocking modal prioritizes paid rescue or explicit no-rescue elimination. Compact hand cards show only name and rank/suit.
+- Healing/UI follow-up: healing cards support validated self-healing during the current actor's PLAY, with card payment. The lower hand follows the active Human/Bot (Bot hands explicitly marked DEBUG), with shared **Đồng ý / Huỷ bỏ** controls for card selection. Paid Dying rescue is implemented by the latest follow-up.
+- Latest seating correction: **Human/below -> Bot 1/right -> Bot 2/above -> Bot 3/left -> Human**, geometrically counterclockwise on screen. Bot 1 and Bot 3 UI positions are swapped; engine seat order remains `[1, 2, 3, 4]`. This supersedes all earlier left/right layouts recorded below.
+- Latest correction: **4 opening cards each, plus normal 2-card DRAW on every turn including the first**; Human enters first PLAY with 6. No first-DRAW skipping remains. All six phase labels are Vietnamese. Named order remains Human -> Bot 1 -> Bot 2 -> Bot 3. Target Dodge confirmation/face-down Hủy/Cướp and the 34-card user deck are unchanged.
+- Deck JSON now accepts numeric suits: **0 = spades/Bích, 1 = hearts/Cơ, 2 = diamonds/Rô, 3 = clubs/Tép**. `data/decks/standard.json` uses these numbers; existing named suits remain supported. Quantities, ranks, card order and gameplay are unchanged.
 - Stage 0.1 — Dying integration is implemented and its scoped regression tests pass.
-- Playable Prototype UI v0.1 is available at `res://scenes/dev/playable_prototype.tscn` (open this scene and press F6). It is a manual four-seat game surface, with no AI or new gameplay rules. The original main scene/project settings and 13 regression suites are unchanged.
+- Combat v0.5 / Stage 0.2 and Playable Prototype UI v0.2 are implemented under the explicit counterclockwise/auto-phase rules below. Open `res://scenes/dev/playable_prototype.tscn` and press F6; startup/main scene and project settings remain unchanged.
 - Latest Card/Deck regression repair: **13/13 suites passed** with GDScript warnings-as-errors enabled in the temporary test project. The previous 11/13 Stage 0.1 result is retained below as historical evidence.
-- Stage 0.2 / Combat v0.5 has **not** been started. Wait for explicit approval before proceeding.
-- `AGENTS.md` and all four handoff documents are present locally. `ARCHITECTURE.md` retains the earlier GitHub snapshot; its unreachable-code, pending-dying attack, distance, and missing-DyingSystemTest findings are resolved in this workspace as recorded below.
+- Latest v0.5 validation: **13/13 regression suites PASS plus UI smoke PASS**, with warnings-as-errors enabled in the temporary project. Stop after v0.5 / UI v0.2; Stage 0.3 has not been started.
+- All four handoff documents are updated for v0.5; earlier snapshot findings and test records are explicitly historical.
 - No commit or push was performed. Pre-existing workspace edits and handoff files were preserved.
 
-## Implemented and verified for Stage 0.1
+## Latest follow-up — paid rescue, negative HP and JSON descriptions, 2026-11-06
+
+- Implemented the latest explicit rule: lethal damage preserves negative HP; the target stays DYING until HP > 0. A DYING player may use their own healing card; another living player may use their owned card regardless of whose turn it is. Each confirmation pays exactly one card and reads its positive integral amount from JSON. At -1 with +1 cards, the first use reaches 0 and keeps the modal/guards; the second reaches 1 and resumes the interrupted flow.
+- API migration: `CombatController.rescue_player(rescuer_id, target_id, card_id=0)` now takes a healing-card **instance ID**, replacing the old free heal_amount argument. Omitted/zero, spent, wrong-owner/type/target cards reject without cost. It routes through new `ActionExecutor.use_rescue` / `ActionValidator.validate_rescue`; the shared healing-card validation is reused. The low-level `DyingManager.rescue_player(..., heal_amount)` remains the HP/state operation and now permits self-rescue. UI never invokes it directly or writes HP/life state.
+- UI modal selects a rescuer (including the target), lists their healing cards and requires card selection plus Đồng ý. Changing rescuer/partial recovery clears the previous card selection. No-card rescuers cannot confirm. Main/Debug rescue buttons now open this paid picker, with no free-rescue UI action. Explicit no-rescue/finalization remains available; no timeout, automatic card use, ordered pass protocol or new AI rule was added.
+- `data/cards.json` already owned full descriptions. Updated the healing description for paid self/other rescue and negative HP; removed hardcoded card-description/usage branches from `_card_usage`, which now returns the JSON description. Hand/rescue tooltips and selection messages read that field. Compact card faces still show only name/rank/suit. Gameplay amounts remain in effect parameters, separate from descriptive text.
+- Files changed in this task: `data/cards.json`; `scripts/actions/action_validator.gd`, `scripts/actions/action_executor.gd`, `scripts/actions/effect_resolver.gd`, `scripts/combat/dying_manager.gd`, `scripts/combat/combat_controller.gd`, `scripts/dev/playable_prototype.gd`; `scripts/test/dying_system_test.gd`, `scripts/test/turn_manager_test.gd`, `scripts/test/playable_prototype_smoke.gd`; all four handoff docs. Preserved other workspace edits, including deck/scene changes; no commit/push.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy. Inspected each suite completion and error logs; no script errors/warnings/load failures. Tests migrate the old free-rescue fixtures to paid cards and verify negative HP (-2 -> -1 -> 0 -> 1), self/other rescue, ownership/type/missing/spent-card rejection without cost, partial recovery blocking, card conservation, no-card UI state and JSON-backed tooltip/selection descriptions. Existing turn/Attack/Dodge/tool/heal scenarios retained. `git diff --check` passed.
+- Desktop OpenGL capture at 1280x720 visually verified the paid self-rescue modal at HP -1 with the two-HP requirement, rescuer selector, card choices and confirmation. Known certificate/editor-settings environment diagnostics remain unrelated to script results. Central damage events, simultaneous/nested damage ordering and rescue pass/timing protocol remain future work.
+
+Validation commands (same temporary-copy setup and regression runner as earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$rescuePath = 'C:/Users/Admin/AppData/Local/Temp/tactics-rescue-cards-d74e6da0b0bd416492f53af0ff2a441c'
+& $godotExecutable --headless --path $rescuePath --editor --import --quit --log-file (Join-Path $rescuePath 'import.log')
+& $godotExecutable --headless --path $rescuePath --script res://regression_runner.gd --quit-after 600 --log-file (Join-Path $rescuePath 'regression.log')
+& $godotExecutable --headless --path $rescuePath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $rescuePath 'ui-smoke.log')
+& $godotExecutable --path $rescuePath --rendering-method gl_compatibility --script res://capture.gd --quit-after 600 --log-file (Join-Path $rescuePath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper gathers owned healing-card fixtures through transfer APIs, applies five damage to the four-HP target via EffectResolver, opens self-rescue selection and renders `paid-rescue.png`. Helpers/screenshots stay outside the repository.
+
+## Historical follow-up — Dying priority and compact card faces, 2026-11-06
+
+- Found gaps: transition/status/UI branches checked pending Attack before Dying; response execution did not reject concurrent Dying; unregistered DYING from direct resolver/pipeline calls could block phases without exposing a rescue window; UI had no blocking Dying picker.
+- Added `TurnManager.get_dying_block_reason()` before Attack checks and as the response guard. `DyingManager.ensure_pending_dying()` adopts an existing DYING participant if no window is registered, preserving any active window. Controller status/rescue/finalize and transition guards use it. This is boundary discovery, not a centralized damage-event dispatcher or a simultaneous-damage rules implementation.
+- Pending Dodge/pass now fails without card/window mutation while Dying is unresolved. Rescue resumes the original response. If its target is eliminated, controller finalization completes the stale attack via the executor without consuming Dodge or applying more damage.
+- UI opens a blocking Dying modal before Attack/tool choices, showing the target, HP, living rescuer selector, simulated rescue and explicit no-rescue elimination. Normal actions/phase progression remain blocked. Existing simulation rescue/payment rules are unchanged. HP still clamps to 0 for lethal/overkill damage; negative-HP arithmetic was not introduced.
+- Hand cards show only name and rank/suit, with smaller dimensions; the extra usage-description row was removed. Hover descriptions remain available.
+- Files changed: `scripts/combat/dying_manager.gd`, `scripts/core/turn_manager.gd`, `scripts/actions/action_executor.gd`, `scripts/combat/combat_controller.gd`, `scripts/dev/playable_prototype.gd`, `scripts/test/dying_system_test.gd`, `scripts/test/playable_prototype_smoke.gd`, and all four docs. No card data/default scene/project settings changes, no commit/push.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS** with Godot `4.7.2.stable.official.ed1daf0bf` and warnings-as-errors enabled in a temporary copy. New cases cover simultaneous pending Attack/Dying, direct damage discovery, rejection without Dodge consumption, resume after rescue, stale attack closure after elimination, Dying modal priority and compact card captions. Existing healing/tool/turn suites retained. No script errors/warnings/load failures; all suite completion markers inspected. `git diff --check` passed.
+- Desktop OpenGL capture at 1280x720 verified compact cards and the Dying modal. An initial narrow-label layout issue was corrected, the capture inspected again and UI smoke rerun successfully. Known certificate/editor-settings environment diagnostics remain separate.
+
+Validation commands (same copy setup and regression runner as previous records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$dyingPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-dying-priority-9655226407b64f769c873038579f2ceb'
+& $godotExecutable --headless --path $dyingPath --editor --import --quit --log-file (Join-Path $dyingPath 'import.log')
+& $godotExecutable --headless --path $dyingPath --script res://regression_runner.gd --quit-after 600 --log-file (Join-Path $dyingPath 'regression.log')
+& $godotExecutable --headless --path $dyingPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $dyingPath 'ui-smoke.log')
+& $godotExecutable --path $dyingPath --rendering-method gl_compatibility --script res://capture.gd --quit-after 600 --log-file (Join-Path $dyingPath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper renders Human and Bot hands, then uses the existing resolver to inflict lethal damage and renders `dying-modal.png`. Helpers/screenshots stay outside the repository. Centralized notifications and nested/simultaneous lethal-event ordering remain Stage 0.3 work.
+
+## Latest follow-up — healing cards and manual Bot hand controls, 2026-11-06
+
+- Root cause: EffectResolver could restore HP, but there was no card-use API to validate ownership/turn/phase, read the healing amount and pay the healing card; UI therefore reported the card unsupported.
+- Added `ActionValidator.validate_heal`, `ActionExecutor.use_heal`, `CombatController.use_heal`. Self-healing requires a living wounded current actor in PLAY and an owned single-effect restore_hp card with positive integral JSON amount. HP caps at max; success discards the healing card once. Invalid/full-HP/out-of-turn/out-of-phase/non-owner/window/effect-hold requests spend nothing. Existing resolver/API names retained. Healing others and card-based Dying rescue were not introduced.
+- Lower hand now displays the active player's real cards, with Bot DEBUG labeling. Select a card and any needed target, then Đồng ý. During DISCARD the same button submits the chosen discard. Huỷ bỏ clears local card/target selection without spending cards. Selection clears on actor change or card loss. End Turn follows the active actor; the separate manual Debug sidebar remains. Target response modal retains Đồng ý and explicit Không Né; tool modal uses Đồng ý / Huỷ bỏ.
+- Files changed: `scripts/actions/action_validator.gd`, `scripts/actions/action_executor.gd`, `scripts/combat/combat_controller.gd`, `scripts/dev/playable_prototype.gd`, `scripts/test/action_executor_test.gd`, `scripts/test/playable_prototype_smoke.gd`, and all four docs. No deck JSON, default scene, project settings, turn order or DRAW changes. No commit/push; Stage 0.3 not started.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy. Inspected all suite completion outputs, not exit status alone; no script errors/warnings/load failures. New tests cover heal payment/cap/JSON amount and invalid requests, Human/Bot healing through UI, cancellation without cost, each active hand and hidden inactive hands. Existing Attack/Dodge/tool/Dying/discard scenarios retained. `git diff --check` passed.
+- Rendered the updated UI using OpenGL compatibility at 1280x720 and visually inspected the Bot-turn hand, active seat, shared buttons and Debug sidebar. Temporary capture outputs: `human-hand.png`, `bot-hand.png`. Known certificate/editor-settings access diagnostics remain environmental.
+
+Validation commands (same temporary-copy setup and regression runner as the earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$uiTestPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-heal-ui-44bb3b7dbb0b4c718a104b4a77892531'
+& $godotExecutable --headless --path $uiTestPath --editor --import --quit --log-file (Join-Path $uiTestPath 'import.log')
+& $godotExecutable --headless --path $uiTestPath --script res://regression_runner.gd --quit-after 600 --log-file (Join-Path $uiTestPath 'regression.log')
+& $godotExecutable --headless --path $uiTestPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $uiTestPath 'ui-smoke.log')
+& $godotExecutable --path $uiTestPath --rendering-method gl_compatibility --script res://capture.gd --quit-after 600 --log-file (Join-Path $uiTestPath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper instantiates the prototype, renders the opening hand, ends Human PLAY and submits any required discards via the controller, then renders the Bot hand. No capture/test runner was added to production.
+
+## Latest correction — counterclockwise screen layout, 2026-11-06
+
+- Swapped Bot 1 to the right and Bot 3 to the left; Human remains below and Bot 2 above. The existing named turn sequence now travels counterclockwise on screen. The banner explicitly says `Ngược chiều kim đồng hồ` and displays the engine sequence.
+- Changed `scripts/dev/playable_prototype.gd`, `scripts/test/playable_prototype_smoke.gd` and the four handoff docs. No engine/API/card-data changes; opening deal and DRAW behavior preserved. No commit/push.
+- UI smoke now checks actual global seat coordinates, in addition to the existing full turn cycle and eliminated-seat skipping.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, fresh temporary copy with warnings-as-errors enabled. All suite completion outputs inspected; no script errors/warnings/load failures. The known certificate/editor-settings environment diagnostics remain separate.
+- Temporary test project: `C:/Users/Admin/AppData/Local/Temp/tactics-seats-6881dd39c01a4ba58bb7459f38367d61`. Same copy/import/runner setup as the DRAW correction below. Executed `--headless --path <temporary-project> --editor --import --quit`, then `--headless --path <temporary-project> --script res://regression_runner.gd --quit-after 600` and `--headless --path <temporary-project> --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600`; logs: `import.log`, `regression.log`, `ui-smoke.log`. `git diff --check` passed.
+
+## Latest correction — first-turn DRAW and Vietnamese phases, 2026-11-06
+
+- Removed first-DRAW suppression and its unused tracking from TurnManager; start_match still deals four cards once, then uses the standard DRAW. On the first Human PLAY: Human has 6, other seats have 4; each Bot draws its own 2 on first arrival. Normal hand-limit discard still applies. Resuming PLAY never repeats DRAW.
+- Added `TurnManager.get_phase_display_name()` for Giai đoạn bắt đầu / phán xét / rút bài / sử dụng bài / bỏ bài / kết thúc. UI header, card-use hints, relevant validation/wait messages and turn logging use Vietnamese. Enum values/order and gameplay API method signatures are unchanged.
+- Source changed in this correction: `scripts/core/turn_manager.gd`, `scripts/combat/combat_controller.gd`, `scripts/actions/action_validator.gd`, `scripts/dev/playable_prototype.gd`; tests: `scripts/test/turn_manager_test.gd`, `scripts/test/playable_prototype_smoke.gd`; all four docs updated. Prior workspace edits retained; no deck/main/project-settings change, no commit/push.
+- Actual validation: Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy: **13/13 regression suites PASS and UI smoke PASS**, with no script errors/warnings/load failures. TurnManagerTest covers first-turn draws for all four seats, second Human turn, no duplicate draw on resume and all six translations. UI smoke asserts Vietnamese active/Discard headers and updated hand counts, while retaining the Attack/Dodge/tool/dying/selection scenarios.
+- `git diff --check` passed. Sandbox certificate/editor-settings diagnostics remain unrelated environment limitations.
+
+Exact commands (same temporary-copy/runner setup as earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$drawPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-first-draw-fdca10c56adc4fd3acc2b1bd3e9222a4'
+& $godotExecutable --headless --path $drawPath --editor --import --quit --log-file (Join-Path $drawPath 'import.log')
+& $godotExecutable --headless --path $drawPath --script res://regression_runner.gd --log-file (Join-Path $drawPath 'regression.log')
+& $godotExecutable --headless --path $drawPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $drawPath 'ui-smoke.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+## Historical opening hands and card-choice interactions — 2026-11-06
+
+The first-DRAW skip in this earlier record has been superseded by the correction above; the tool/response behavior is unchanged.
+
+- User clarification retained the named order Human/below -> Bot 1/left -> Bot 2/above -> Bot 3/right -> Human. Its geometric screen-direction ambiguity is documented in GDD; the UI now displays the exact named sequence and explicitly explains manual Bot turns, rather than changing the order contrary to the user's choice.
+- GameState now owns a once-only, validated four-card opening deal; CombatController.start_match uses it. Too few cards or a non-pristine/duplicate deal fails before mutation. The current 34-card user deck supplies 16 opening cards, leaving 18 in draw. The deck JSON was preserved.
+- Each player's first turn skips DRAW. Human and all Bots enter their first PLAY with 4; Human returns to PLAY with 6 at their next turn if no cards were used. Legacy `start_game()` remains available for existing engine fixtures without initial dealing.
+- Attack still uses the existing range/turn/card checks. A modal overlay opens for the actual victim. It shows their Dodge options, selection alone does not spend anything, and Đồng ý commits the chosen Dodge. Không Né explicitly resolves damage; no automatic Bot response was added.
+- Hủy/Cướp now use their existing JSON effects through new validator/executor/controller APIs. The source card and target are validated before showing face-down cards in allowed zones. Only zone labels are visible; names/suits/ranks/tooltips are absent. Confirm revalidates and pays the source tool once; cancelling or stale/out-of-range/invalid selection costs nothing. Steal uses JSON distance 1; Discard has no added distance restriction. No additional counter/response rules were invented.
+- UI is still presentation/API calls only. Actual table order, turn skipping and phase guards remain in the engine. Default scene and project settings are unchanged. Stage 0.3, AI, victory and paid rescue were not implemented.
+- Changed source: `scripts/core/game_state.gd`, `scripts/core/turn_manager.gd`, `scripts/combat/combat_controller.gd`, `scripts/actions/action_validator.gd`, `scripts/actions/action_executor.gd`, `scripts/dev/playable_prototype.gd`.
+- Tests updated: `scripts/test/game_state_test.gd`, `scripts/test/turn_manager_test.gd`, `scripts/test/action_executor_test.gd`, `scripts/test/playable_prototype_smoke.gd`. The same 13 suite classes remain. All four docs updated; prior workspace edits retained. No commit/push.
+
+### Validation
+- **13/13 regression suites PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled only in a fresh temporary copy. DeckTest verifies 34 cards; opening tests cover 4 each, no redeal, insufficient-deck rejection without mutation, first-cycle order/no draws and second-turn DRAW. Tool tests cover Discard/Steal across hand/equipment/judgment, range, ownership, wrong phase/actor/zone, stale choices, pending Attack, payment and conservation.
+- **UI smoke PASS**, including actual mouse events for card backs and confirmation, four opening hands, the full named turn cycle, selection-before-Dodge-confirm with no premature consumption, explicit no-Dodge, tool cancellation/hidden information/commit, and the existing lethal/rescue/elimination/phase/discard scenarios.
+- Each suite's completion output and the UI completion marker were inspected. Final logs have no SCRIPT ERROR, GDScript warning or suite-load failure. Sandbox certificate/editor-settings diagnostics remain environment limitations, distinct from test failures.
+- Desktop OpenGL previews of the opening four-card table, face-down tool picker and target Dodge picker were rendered at 1280x720 and visually inspected. `git diff --check` passed.
+
+Exact validation commands (temporary setup and regression runner follow the earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$interactionPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-interactions-ad5d4521b7314152a1465738fc78ab78'
+& $godotExecutable --headless --path $interactionPath --editor --import --quit --log-file (Join-Path $interactionPath 'import.log')
+& $godotExecutable --headless --path $interactionPath --script res://regression_runner.gd --log-file (Join-Path $interactionPath 'regression.log')
+& $godotExecutable --headless --path $interactionPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $interactionPath 'ui-smoke.log')
+& $godotExecutable --path $interactionPath --script res://capture.gd --quit-after 600 --log-file (Join-Path $interactionPath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper instantiates the UI, saves `opening-four.png`, prepares owned tool/Attack/Dodge fixtures via existing transfer APIs, invokes the UI selection controls and saves `hidden-tools.png` and `dodge-confirm.png`. It stays outside the repository. To try the changes, open `scenes/dev/playable_prototype.tscn`, press F6 or Bàn mới, select a source card/target, and use Dùng bài đã chọn.
+
+## Historical Combat v0.5 / Stage 0.2 + Playable Prototype UI v0.2 — 2026-11-06
+
+The following milestone records predate the opening-hand and card-choice follow-up above.
+
+### Approved rules and implemented behavior
+- **Counterclockwise turns:** Human/below -> Bot 1/left -> Bot 2/above -> Bot 3/right -> Human. TurnManager uses a validated seat-ID order (prototype `[1, 2, 3, 4]`), not node positions or player storage indices.
+- **Automatic phases:** empty START/JUDGMENT, normal DRAW, satisfied DISCARD and empty END run automatically to the next decision. PLAY stops for Human **and** manually controlled Bots; only a valid explicit End Turn request exits it.
+- ELIMINATED seats are skipped when starting/advancing and when the current actor is eliminated during PLAY/DISCARD. Seat search is bounded; with no eligible player, current player is null and progression stops without inventing a winner. A single survivor may continue because role victory is not implemented.
+- Pending Attack Response / Dying Window (or unresolved DYING state) blocks direct TurnManager advance/restart, end turn, discard payment, and automatic progression. Executor binding uses a WeakRef; turn_started resets attack counters and synchronizes the controller tracker even for guarded low-level callers. A regression verifies that mixing direct executor/controller calls cannot grant an extra Attack by resetting that counter twice.
+- Auto-advance has a hard maximum of 32 transitions, rejects budgets outside 1..32, detects no progress, and never automatically exits PLAY. A phase reached on the last permitted step is recognized as a valid decision stop.
+- DISCARD queries RuleEngine, including personal/global hand-limit modifiers. The current actor selects an owned hand card and calls `CombatController.discard_for_turn()` -> ActionExecutor -> ActionValidator -> GameState. Invalid/duplicate/out-of-phase/non-owner requests fail; no card is selected or dropped automatically. When within the limit, progression resumes immediately.
+- A nonempty judgment zone stops with an unsupported-effect message before DRAW. `set_phase_wait(phase, reason)` holds other unresolved effects/choices; an empty reason explicitly clears a hold. Missing/invalid hand-limit data also stops safely. Attack/discard actions cannot bypass an effect hold.
+- Valid response/rescue/finalization resumes automatic phases; a completed action remains valid if a later phase is held. `get_status_message()` exposes the waiting/budget/no-player reason.
+
+### UI v0.2
+- Same F6 scene and four seat positions; visible counterclockwise order and highlighted active seat.
+- Starts automatically in Human PLAY after the normal 2-card DRAW, with no opening-deal rule added.
+- Normal **Kết thúc lượt** replaces Next Phase. During excess-hand DISCARD, the selected Human card can be submitted with **Bỏ lá đã chọn**; the wait prompt states how many remain. Buttons reflect current actor, phase and windows.
+- Separate Debug controls select a Bot/card and offer Attack, Dodge/pass, simulated rescue, End Turn, selected-card discard, draw and automatic resume. Bots do not act automatically.
+- UI only reads game state and calls engine APIs; no assignments to HP, life_state, pending_attack or current_phase. Unsupported card actions and judgment effects are reported. Roles, victory, skills, real rescue payment/order and AI are unchanged/unimplemented.
+
+### Modified files
+- Engine: `scripts/core/turn_manager.gd`, `scripts/combat/combat_controller.gd`, `scripts/actions/action_validator.gd`, `scripts/actions/action_executor.gd`.
+- UI: `scripts/dev/playable_prototype.gd` (existing scene remains unchanged).
+- Tests: `scripts/test/turn_manager_test.gd`, `scripts/test/combat_system_test.gd`, `scripts/test/dying_system_test.gd`, `scripts/test/playable_prototype_smoke.gd`.
+- Docs: `docs/GDD.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_PLAN.md`, this file. Pre-existing edits were preserved. No commit/push.
+
+Existing constructor signatures remain usable through optional arguments; `TurnManager.advance_phase() -> void` is preserved. Controller start now auto-progresses, and its old advance entry point resumes without ending PLAY. Affected tests were deliberately migrated to these approved semantics, retaining the same 13 regression suite classes and earlier card/combat/damage assertions.
+
+### Actual validation results
+- Godot `4.7.2.stable.official.ed1daf0bf`, fresh temporary project with `debug/gdscript/warnings/treat_warnings_as_errors=true`.
+- **13/13 regression suites PASS**: ActionExecutor, ActionValidator, CardDatabase, CardModel, CardZone, CombatSystem, DamageRegistry, Deck, DyingSystem, GameState, RuleContext, RuleEngine, TurnManager.
+- TurnManagerTest adds counterclockwise 2–5 seats with reversed player storage, adjacent/nonadjacent/current/last-player elimination, empty table, auto START/JUDGMENT/DRAW/PLAY, no implicit PLAY exit, explicit actor validation, no extra draws on resume, empty DISCARD skipping, selected/invalid/duplicate discards, unlimited hand modifiers, current-player elimination during DISCARD, direct transition/restart window guards, signal-driven attack reset, unsupported judgment/explicit holds, and budget boundary/invalid-budget stops.
+- **UI smoke PASS**: actual mouse selection, Bot selector, Human/Bot Attack and Dodge, no-Dodge, blocked End Turn/windows, unsupported-card/range messages, interactive Human/Bot DISCARD, rescue/finalize, skipped eliminated Bot, restart and state integrity. No UI gameplay-state assignment.
+- Passing logs have explicit suite/smoke completion output and no SCRIPT ERROR, GDScript warning, or suite-load failure; exit code alone was not used as proof.
+- Rendered and visually inspected the v0.2 desktop OpenGL view at 1280x720, including active-seat highlight, order banner and a real DISCARD decision. `git diff --check` passed.
+- Sandbox certificate/global-editor-settings diagnostics remain environment limitations, distinct from script errors. No permanent project setting was changed.
+
+Exact commands for this run:
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$v05Path = 'C:/Users/Admin/AppData/Local/Temp/tactics-v05-36bb4c5e718f441aac16b36b9b086e70'
+& $godotExecutable --headless --path $v05Path --editor --import --quit --log-file (Join-Path $v05Path 'import.log')
+& $godotExecutable --headless --path $v05Path --script res://regression_runner.gd --log-file (Join-Path $v05Path 'regression.log')
+& $godotExecutable --headless --path $v05Path --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $v05Path 'ui-smoke.log')
+& $godotExecutable --path $v05Path --script res://capture.gd --quit-after 600 --log-file (Join-Path $v05Path 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+Temporary setup copies the workspace source/data/scenes/project into the recorded path and enables warnings-as-errors only in that copy. `regression_runner.gd` uses the same discovery/static-call runner reproduced in the historical record below. `capture.gd` instantiates the prototype, draws four extra Human cards through Debug, presses End Turn, waits for rendering, and saves `prototype-v02-preview.png`. Both helpers remain temporary. The permanent smoke command is `godot --headless --path . --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600` after editor import; inspect its explicit completion marker and errors.
+
+**Remaining boundary:** Stage 0.3 non-attack lethal notification/nested events, judgment resolution, role/victory lifecycle, real rescue rules, equipment/skills/AI and complete MVP presentation. Do not start these without a new instruction.
+
+## Implemented and verified for Stage 0.1 (historical milestone)
 - [x] `ActionExecutor.respond_to_attack()` reaches `begin_dying()` after successful lethal attack damage and before returning success; the unreachable duplicate block is removed.
 - [x] Lethal unblocked attacks leave the target at HP 0 / DYING and open the Dying Window.
 - [x] `ActionExecutor.use_attack()` rejects new attacks during pending dying, including calls made directly to the executor.
@@ -22,7 +214,7 @@
 - [x] `DyingSystemTest.run_all()` is invoked from `main.gd` alongside `DamageRegistryTest`.
 - [x] Dying tests use controlled hands and disable automatic fixture draws, so shuffled deck order does not affect their assertions.
 
-Turn-order removal is deliberately **not** part of Stage 0.1 acceptance: DEVELOPMENT_PLAN.md assigns it to Stage 0.2. Distance removal is verified here; turn skipping remains incomplete.
+Turn-order removal was deliberately not part of Stage 0.1 acceptance; it is now implemented in Stage 0.2 above. Distance behavior remains unchanged.
 
 ## Existing engine foundations
 - Card definitions/instances, JSON card/deck loaders, and a 12-card test deck.
@@ -32,7 +224,9 @@ Turn-order removal is deliberately **not** part of Stage 0.1 acceptance: DEVELOP
 - Attack validation, response windows, Dodge, damage/healing primitives, and DamagePipeline modifier registry.
 - Player ALIVE/DYING/ELIMINATED states and DyingManager simulated rescue/finalization.
 
-## Playable Prototype UI v0.1 — 2026-11-06
+## Historical Playable Prototype UI v0.1 — 2026-11-06
+
+The controls/limits below describe v0.1 only; the current v0.2 behavior and commands are recorded above.
 
 ### Files and scope
 - Added `scenes/dev/playable_prototype.tscn`: independent Control root, runnable with F6; no change to default startup.
@@ -211,15 +405,40 @@ This temporary runner attempts every suite; `SUITE_RETURNED` is **not** a pass m
 
 The sandbox also reported root-certificate-store access errors and could not save global Godot editor settings during import. These environment diagnostics are separate from the two script-test failures; no GDScript warnings/errors were reported for the passing suites.
 
-## Remaining work — not implemented in Stage 0.1
-- **Stage 0.2:** guard direct `TurnManager.advance_phase()` access, skip ELIMINATED seats, define current-turn elimination and no-eligible-player behavior without loops. Public signatures remain unchanged.
-- **Stage 0.3:** centralize lethal-damage notification. Direct DamagePipeline/EffectResolver damage outside the attack-response path does not automatically register pending dying. Nested lethal events need an explicit contract.
+## Remaining work after Combat v0.5
+- **Stage 0.2 completed:** guarded transitions, eliminated-seat skipping, current-player elimination and bounded no-eligible-player handling are verified above.
+- **Stage 0.3:** centralize lethal-damage notification. The Dying-priority follow-up now discovers direct DamagePipeline/EffectResolver DYING at guard/controller boundaries; immediate damage-event registration and nested/simultaneous lethal events still need an explicit contract.
 - **Resolved test debt:** the approved CardZoneTest/DeckTest migration above now passes against existing production APIs; obsolete APIs were not restored.
-- **Simulation only:** rescue payment, order, pass/self-rescue rules, and real healing-card use are OPEN in GDD. Existing rescue behavior was preserved.
-- **Later milestones:** role/victory lifecycle, initial deal, hand-limit discard, judgment, equipment/tool actions, approved characters, bots, and complete MVP UI. The manual Prototype v0.1 above is available separately.
+- **Paid rescue implemented:** self/other eligibility, card payment and negative HP are now covered above. Ordered rescue passes/timing remain OPEN; simultaneous/nested damage still needs a contract.
+- **Later milestones:** role/victory lifecycle, initial deal, judgment, equipment/tool actions, approved characters, bots, and complete MVP UI. Selected-card hand-limit discard and the manual Prototype v0.2 are now available.
 - Workspace `project.godot` still has no default main scene or warnings-as-errors setting. The explicit scene/script commands above were used; most optional test calls in `main.gd` remain commented out.
 
 ## Change log
+
+### 2026-11-06 — Numeric suit values in deck JSON
+- Files changed: `data/decks/standard.json`, `scripts/cards/deck_database.gd`, `scripts/test/deck_test.gd`, this status document. Pre-existing workspace edits were preserved.
+- Converted only suit values in the current standard deck to integers 0..3. Example: `{"suit": 1, "rank": 7}` represents 7 hearts. Each copy is still one physical card; add/remove copies to change quantities. No deck expansion or balance change.
+- DeckDatabase validates finite whole numbers in 0..3 and retains legacy strings (`spades`, `hearts`, `diamonds`, `clubs`), including mixed files. It normalizes accepted values to the existing string-based entries format, preserving public APIs and CardInstance enum/display behavior.
+- DeckTest adds loader/instance coverage for all four numeric and named suits, JSON numeric representation, red/black mapping, mixed input, and rejection of fractions, out-of-range values, booleans, null, unknown/numeric strings and containers. Invalid loads expose no partial deck. Temporary fixture files are removed after loading.
+- Validation: Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled only in a fresh temporary copy; **13/13 regression suites PASS and UI smoke PASS**, no script errors/warnings/load failures. `git diff --check` passed. The known sandbox certificate/editor-settings diagnostics are unchanged.
+- Exact validation commands (temporary setup/runner follows the earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$suitPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-suits-b616ec612e8b417c8386a4295dc72fdd'
+& $godotExecutable --headless --path $suitPath --editor --import --quit --log-file (Join-Path $suitPath 'import.log')
+& $godotExecutable --headless --path $suitPath --script res://regression_runner.gd --log-file (Join-Path $suitPath 'regression.log')
+& $godotExecutable --headless --path $suitPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $suitPath 'ui-smoke.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+- Commit/PR: none. No further milestone was started.
+
+### 2026-11-06 — Combat v0.5 / Stage 0.2 and Playable Prototype UI v0.2
+- Scope/files/commands/results: recorded in the current milestone above. Approved counterclockwise and automatic-decision-phase rules are reflected in all four docs.
+- Result: 13/13 regression suites and UI smoke PASS under warnings-as-errors; desktop visual verification complete.
+- Remaining risks: Stage 0.3 and OPEN gameplay rules remain outside this change. No automatic winner or rescue payment was added.
+- Commit/PR: none. Stop after Combat v0.5 / UI v0.2.
 
 ### 2026-11-06 — Stage 0.1: stabilize attack-driven Dying integration
 - Scope: lethal attack -> Dying Window -> rescue/elimination, pending-window guards, DYING seat distance, and regression evidence. Existing Stage 0.1 fixes were retained rather than rewritten.

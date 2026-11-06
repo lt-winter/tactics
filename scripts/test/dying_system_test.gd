@@ -10,6 +10,7 @@ static func run_all() -> void:
 	_test_overkill_damage()
 	_test_lethal_damage_and_rescue()
 	_test_elimination()
+	_test_dying_preempts_attack_response()
 	print("=== ALL DYING SYSTEM TESTS PASSED ===")
 
 
@@ -18,11 +19,14 @@ static func _create_combat(target_hp: int) -> CombatController:
 	assert(database.load_from_file("res://data/cards.json"))
 	var attack: CardDefinition = database.get_definition("attack")
 	var dodge: CardDefinition = database.get_definition("dodge")
+	var heal: CardDefinition = database.get_definition("heal")
 	var cards: Array[CardInstance] = [
 		CardInstance.new(1, attack, CardInstance.Suit.SPADES, 7),
 		CardInstance.new(2, attack, CardInstance.Suit.HEARTS, 7),
 		CardInstance.new(3, dodge, CardInstance.Suit.CLUBS, 2)
 	]
+	for card_id: int in range(4, 12):
+		cards.append(CardInstance.new(card_id, heal, CardInstance.Suit.HEARTS, 3))
 	var players: Array[Player] = [
 		Player.new(1, "Attacker", 4),
 		Player.new(2, "Target", target_hp),
@@ -45,10 +49,17 @@ static func _create_combat(target_hp: int) -> CombatController:
 	))
 	var combat: CombatController = CombatController.new(state, turns, rules)
 	assert(combat.start_game().valid)
-	for phase_step: int in range(3):
-		assert(combat.advance_phase().valid)
 	assert(turns.current_phase == TurnManager.Phase.PLAY)
 	return combat
+
+
+static func _give_heal(combat: CombatController, player_id: int) -> int:
+	for card: CardInstance in combat.game_state.deck.draw_pile:
+		if card.definition.has_effect("restore_hp"):
+			assert(combat.game_state.zone_manager.transfer_card(card.instance_id, "draw", 0, "hand", player_id))
+			return card.instance_id
+	assert(false, "Missing heal fixture")
+	return 0
 
 
 static func _test_nonlethal_damage() -> void:
@@ -127,7 +138,7 @@ static func _test_lethal_damage_and_rescue() -> void:
 	assert(not combat.rescue_player(3, 2, 0).valid)
 	assert(not combat.rescue_player(99, 2).valid)
 	assert(target.hp == 0 and combat.has_pending_dying())
-	assert(combat.rescue_player(3, 2, 100).valid)
+	assert(combat.rescue_player(3, 2, _give_heal(combat, 3)).valid)
 	assert(target.hp == target.max_hp and target.is_alive())
 	assert(not combat.has_pending_dying())
 	assert(not combat.finalize_dying().valid)
@@ -170,7 +181,7 @@ static func _test_repeated_invalid_responses() -> void:
 		assert(target.get_hand_count() == 2)
 		assert(state.deck.get_discard_count() == 1)
 		assert(state.validate_state())
-	assert(combat.rescue_player(3, 2).valid)
+	assert(combat.rescue_player(3, 2, _give_heal(combat, 3)).valid)
 	assert(target.hp == 1 and target.is_alive())
 	assert(not combat.has_pending_dying())
 	assert(combat.advance_phase().valid)
@@ -185,15 +196,26 @@ static func _test_overkill_damage() -> void:
 	assert(combat.use_attack(1, 2, 1).valid)
 	assert(combat.respond_to_attack(2).valid)
 	var target: Player = combat.game_state.get_player(2)
-	assert(target.hp == 0 and target.is_dying())
+	assert(target.hp == -2 and target.is_dying())
 	assert(combat.has_pending_dying())
 	assert(not combat.has_pending_response())
 	assert(not combat.advance_phase().valid)
-	assert(combat.rescue_player(3, 2).valid)
+	var self_heal: int = _give_heal(combat, 2)
+	assert(not combat.rescue_player(3, 2, self_heal).valid)
+	assert(not combat.rescue_player(2, 2).valid)
+	assert(not combat.rescue_player(2, 2, 3).valid)
+	assert(combat.rescue_player(2, 2, self_heal).valid)
+	assert(target.hp == -1 and target.is_dying() and combat.has_pending_dying())
+	assert(not combat.rescue_player(2, 2, self_heal).valid)
+	assert(combat.rescue_player(3, 2, _give_heal(combat, 3)).valid)
+	assert(target.hp == 0 and target.is_dying() and combat.has_pending_dying())
+	assert(not combat.end_turn(1).valid)
+	assert(combat.rescue_player(2, 2, _give_heal(combat, 2)).valid)
 	assert(target.hp == 1 and target.is_alive())
 	assert(not combat.has_pending_dying())
+	assert(combat.game_state.deck.get_discard_count() == 4)
 	assert(combat.game_state.validate_state())
-	print("[PASS] Overkill clamps HP to zero and opens a rescuable Dying Window")
+	print("[PASS] Negative HP and paid self/other rescue: -2 -> -1 -> 0 -> 1; no early resume or duplicate payment")
 
 
 static func _test_elimination() -> void:
@@ -215,6 +237,44 @@ static func _test_elimination() -> void:
 	assert(combat.advance_phase().valid)
 	assert(state.validate_state())
 	print("[PASS] Elimination closes the window and removes the seat from distance")
+
+
+static func _test_dying_preempts_attack_response() -> void:
+	var combat: CombatController = _create_combat(4)
+	assert(combat.use_attack(1, 2, 1).valid)
+	var pending: Dictionary = combat.executor.pending_attack.duplicate(true)
+	# Another engine damage source can interrupt the pending response.
+	assert(combat.executor.damage_pipeline.process_damage(1, 3, 4))
+	assert(combat.game_state.get_player(3).hp == 0)
+	assert(combat.has_pending_dying())
+	assert(combat.executor.dying_manager.dying_player_id == 3)
+	assert(combat.turn_manager.get_transition_block_reason().contains("hấp hối"))
+	for dodge_id: int in [0, 3]:
+		assert(not combat.respond_to_attack(2, dodge_id).valid)
+		assert(combat.executor.pending_attack == pending)
+		assert(combat.game_state.get_player(2).get_hand_count() == 1)
+	assert(not combat.end_turn(1).valid)
+	assert(not combat.advance_phase().valid)
+	combat.turn_manager.advance_phase()
+	assert(combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
+	assert(combat.rescue_player(4, 3, _give_heal(combat, 4)).valid)
+	assert(combat.has_pending_response())
+	assert(combat.respond_to_attack(2, 3).valid)
+	assert(not combat.has_pending_response())
+	assert(combat.game_state.get_player(2).hp == 4)
+	# If the victim dies to an interrupting source, no Dodge/deadlock remains.
+	var eliminated: CombatController = _create_combat(4)
+	assert(eliminated.use_attack(1, 2, 1).valid)
+	assert(eliminated.executor.resolver.deal_damage(2, 10))
+	assert(not eliminated.executor.respond_to_attack(2, 3).valid)
+	assert(eliminated.has_pending_response() and eliminated.has_pending_dying())
+	assert(eliminated.finalize_dying().valid)
+	assert(eliminated.game_state.get_player(2).is_eliminated())
+	assert(not eliminated.has_pending_dying() and not eliminated.has_pending_response())
+	assert(eliminated.game_state.get_player(2).get_hand_count() == 1)
+	assert(eliminated.game_state.deck.get_discard_count() == 1)
+	assert(combat.game_state.validate_state() and eliminated.game_state.validate_state())
+	print("[PASS] Dying preempts pending Dodge/damage/phase; rescue resumes and elimination cancels stale attack")
 
 
 static func _reduce_damage(context: DamageContext) -> void:
