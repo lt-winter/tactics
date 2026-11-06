@@ -39,7 +39,11 @@ func use_attack(
 	target_id: int,
 	card_id: int
 ) -> ActionResult:
-	
+	if dying_manager.has_pending_dying():
+		return ActionResult.failure(
+			"Phải giải quyết hấp hối trước khi Tấn công."
+		)
+
 	if not pending_attack.is_empty():
 		return ActionResult.failure(
 			"Đang có một đòn Tấn công chờ phản ứng."
@@ -163,11 +167,6 @@ func respond_to_attack(
 	):
 		return ActionResult.failure("Không thể xử lý sát thương.")
 
-	pending_attack.clear()
-	return ActionResult.success()
-
-
-	
 	pending_attack.clear()
 
 	if target.is_dying():

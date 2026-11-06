@@ -8,17 +8,17 @@ static func calculate(
 	from_player_id: int,
 	to_player_id: int
 ) -> int:
-	var alive_players: Array[Player] = []
+	var seated_players: Array[Player] = []
 
-	for player in players:
-		if player.is_alive():
-			alive_players.append(player)
+	for player: Player in players:
+		if not player.is_eliminated():
+			seated_players.append(player)
 
 	var from_index: int = -1
 	var to_index: int = -1
 
-	for i in range(alive_players.size()):
-		var player: Player = alive_players[i]
+	for i: int in range(seated_players.size()):
+		var player: Player = seated_players[i]
 
 		if player.player_id == from_player_id:
 			from_index = i
@@ -32,7 +32,7 @@ static func calculate(
 	if from_index == to_index:
 		return 0
 
-	var count: int = alive_players.size()
+	var count: int = seated_players.size()
 	var direct_distance: int = abs(from_index - to_index)
 
 	return mini(

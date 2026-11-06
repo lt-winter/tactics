@@ -12,3 +12,4 @@ func _ready() -> void:
 	#ActionExecutorTest.run_all()
 	#CombatSystemTest.run_all()
 	DamageRegistryTest.run_all()
+	DyingSystemTest.run_all()

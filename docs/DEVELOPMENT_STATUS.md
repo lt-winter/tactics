@@ -1,0 +1,114 @@
+# Tactics — Development Status
+
+**Workspace verified:** `E:\Projects\Godot\tactics`, 2026-11-06, Godot `4.7.2.stable.official.ed1daf0bf`.
+**Evidence standard:** implemented behavior, executed tests, and future work are recorded separately. A zero Godot process exit code alone does not establish a test pass.
+
+## Current snapshot
+- Stage 0.1 — Dying integration is implemented and its scoped regression tests pass.
+- All 13 regression suites were attempted: **11 passed, 1 runtime failure, 1 parse failure**. The two pre-existing Card/Deck test failures remain outside this milestone; the full regression suite is not green.
+- Stage 0.2 / Combat v0.5 has **not** been started. Wait for explicit approval before proceeding.
+- `AGENTS.md` and all four handoff documents are present locally. `ARCHITECTURE.md` retains the earlier GitHub snapshot; its unreachable-code, pending-dying attack, distance, and missing-DyingSystemTest findings are resolved in this workspace as recorded below.
+- No commit or push was performed. Pre-existing workspace edits and handoff files were preserved.
+
+## Implemented and verified for Stage 0.1
+- [x] `ActionExecutor.respond_to_attack()` reaches `begin_dying()` after successful lethal attack damage and before returning success; the unreachable duplicate block is removed.
+- [x] Lethal unblocked attacks leave the target at HP 0 / DYING and open the Dying Window.
+- [x] `ActionExecutor.use_attack()` rejects new attacks during pending dying, including calls made directly to the executor.
+- [x] Existing `CombatController.advance_phase()` and `start_game()` guards reject progression/restart during pending dying.
+- [x] `DistanceCalculator` keeps DYING seats and excludes only ELIMINATED; its loop variables have explicit types.
+- [x] Simulated rescue restores ALIVE, closes the window, and allows normal actions/phase progression to resume.
+- [x] Finalizing dying sets ELIMINATED, closes the window, and removes that seat from distance counting.
+- [x] `DyingSystemTest.run_all()` is invoked from `main.gd` alongside `DamageRegistryTest`.
+- [x] Dying tests use controlled hands and disable automatic fixture draws, so shuffled deck order does not affect their assertions.
+
+Turn-order removal is deliberately **not** part of Stage 0.1 acceptance: DEVELOPMENT_PLAN.md assigns it to Stage 0.2. Distance removal is verified here; turn skipping remains incomplete.
+
+## Existing engine foundations
+- Card definitions/instances, JSON card/deck loaders, and a 12-card test deck.
+- GameState, Player, card-zone transfers, and card-conservation checks.
+- Six-phase TurnManager: START/JUDGMENT/DRAW/PLAY/DISCARD/END.
+- RuleEngine, RuleModifier, RuleContext, circular distance, and source priority 300 > 200 > 100.
+- Attack validation, response windows, Dodge, damage/healing primitives, and DamagePipeline modifier registry.
+- Player ALIVE/DYING/ELIMINATED states and DyingManager simulated rescue/finalization.
+
+## Testing record — 2026-11-06
+
+Tests ran against a temporary copy of the current source, data, and scene using the installed Godot CLI. Only the temporary project enabled `debug/gdscript/warnings/treat_warnings_as_errors=true`; the workspace's project settings were not changed.
+
+| Suite | Result |
+|---|---|
+| ActionExecutorTest | PASS |
+| ActionValidatorTest | PASS |
+| CardDatabaseTest | PASS |
+| CardModelTest | PASS |
+| CardZoneTest | FAIL: runtime call to nonexistent `validate_unique_cards()` at line 83 |
+| CombatSystemTest | PASS |
+| DamageRegistryTest | PASS |
+| DeckTest | FAIL: parse/type-inference errors at lines 66 and 89; test still references removed `Deck.draw()` / `discard()` APIs |
+| DyingSystemTest | PASS: all 7 test groups |
+| GameStateTest | PASS |
+| RuleContextTest | PASS |
+| RuleEngineTest | PASS |
+| TurnManagerTest | PASS for its existing scenarios; does not verify Stage 0.2 behavior |
+
+DyingSystemTest covers nonlethal damage, Dodge, reduced/cancelled damage, repeated invalid responses, overkill, lethal damage/rescue, and elimination/distance. It also checks pending-window guards and rejected rescue/finalization requests. Overkill retains the existing HP-at-zero model; no negative-HP rescue rule was introduced.
+
+The scene smoke test executed both selected suites through `main.gd` successfully. `git diff --check` passed.
+
+### Exact commands executed
+
+PowerShell variables used for the recorded run:
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$stage01Path = 'C:/Users/Admin/AppData/Local/Temp/tactics-stage01-b60109f09ecb4c7fa57c8f963aadc73e'
+& $godotExecutable --headless --path $stage01Path --editor --import --quit --log-file (Join-Path $stage01Path 'import.log')
+& $godotExecutable --headless --path $stage01Path --script res://stage01_runner.gd --log-file (Join-Path $stage01Path 'regression.log')
+& $godotExecutable --headless --path $stage01Path res://scenes/main.tscn --quit-after 1 --log-file (Join-Path $stage01Path 'scene.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary `stage01_runner.gd` is reproduced below so the regression invocation can be recreated in a fresh temporary project. Copy `scripts/`, `data/`, `scenes/`, `project.godot`, `main.gd`, `main.gd.uid`, and `icon.svg`; enable warnings-as-errors in that copy, save this script at its root, import, and run the commands with the new path. On a machine without this executable path, substitute its installed Godot binary.
+
+```gdscript
+extends SceneTree
+
+func _initialize() -> void:
+	assert(ProjectSettings.get_setting("debug/gdscript/warnings/treat_warnings_as_errors"))
+	print("WARNINGS_AS_ERRORS=true")
+	var suites: PackedStringArray = DirAccess.get_files_at("res://scripts/test")
+	suites.sort()
+	for suite_path: String in suites:
+		if not suite_path.ends_with("_test.gd"):
+			continue
+		print("SUITE_BEGIN: ", suite_path)
+		var suite: Script = load("res://scripts/test/" + suite_path)
+		if suite == null or not suite.can_instantiate():
+			print("SUITE_LOAD_FAILED: ", suite_path)
+			continue
+		suite.call("run_all")
+		print("SUITE_RETURNED: ", suite_path)
+	quit()
+```
+
+This temporary runner attempts every suite; `SUITE_RETURNED` is **not** a pass marker because GDScript runtime errors can return control to the caller. Results above were determined by inspecting each suite's completion output and SCRIPT ERROR entries in `regression.log`, including the two failures despite process exit code 0.
+
+The sandbox also reported root-certificate-store access errors and could not save global Godot editor settings during import. These environment diagnostics are separate from the two script-test failures; no GDScript warnings/errors were reported for the passing suites.
+
+## Remaining work — not implemented in Stage 0.1
+- **Stage 0.2:** guard direct `TurnManager.advance_phase()` access, skip ELIMINATED seats, define current-turn elimination and no-eligible-player behavior without loops. Public signatures remain unchanged.
+- **Stage 0.3:** centralize lethal-damage notification. Direct DamagePipeline/EffectResolver damage outside the attack-response path does not automatically register pending dying. Nested lethal events need an explicit contract.
+- **Existing test debt:** migrate CardZoneTest and DeckTest to current APIs as a separately approved change; do not restore obsolete production APIs just to make those tests pass.
+- **Simulation only:** rescue payment, order, pass/self-rescue rules, and real healing-card use are OPEN in GDD. Existing rescue behavior was preserved.
+- **Later milestones:** role/victory lifecycle, initial deal, hand-limit discard, judgment, equipment/tool actions, approved characters, bots, and playable UI.
+- Workspace `project.godot` still has no default main scene or warnings-as-errors setting. The explicit scene/script commands above were used; most optional test calls in `main.gd` remain commented out.
+
+## Change log
+
+### 2026-11-06 — Stage 0.1: stabilize attack-driven Dying integration
+- Scope: lethal attack -> Dying Window -> rescue/elimination, pending-window guards, DYING seat distance, and regression evidence. Existing Stage 0.1 fixes were retained rather than rewritten.
+- Milestone files: `scripts/actions/action_executor.gd`, `scripts/rules/distance_calculator.gd`, `scripts/test/dying_system_test.gd` (with its existing UID), `main.gd`, and this status document.
+- This completion pass added repeated-invalid-response and overkill tests, explicit distance-loop types, and the current status/testing record. DyingManager, CombatController, TurnManager, card data, and unrelated tests were not modified.
+- Tests/commands/results: recorded above; Stage 0.1 tests pass, full regression remains 11/13 due to two pre-existing failures.
+- Remaining risks: direct turn bypass and turn skipping (Stage 0.2), non-attack lethal notification (Stage 0.3), and OPEN rescue rules.
+- Commit/PR: none. Stop after Stage 0.1; Stage 0.2 requires a separate instruction.
