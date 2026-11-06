@@ -115,6 +115,15 @@ func _validate_card(card: Variant, location: String) -> bool:
 	if not card.has("effects") or not (card["effects"] is Array):
 		errors.append(location + " thiếu mảng effects.")
 		return false
+	if card["category"] == "equipment" and card["subcategory"] == "weapon":
+		var weapon_range: Variant = card.get("range")
+		if card.get("equipment_slot") != "weapon" or not (weapon_range is int or weapon_range is float):
+			errors.append(location + " cần equipment_slot=weapon và range nguyên dương.")
+			return false
+		var range_number: float = float(weapon_range)
+		if not is_finite(range_number) or range_number < 1 or range_number != floor(range_number) or range_number > 2147483647:
+			errors.append(location + " có range vũ khí không hợp lệ.")
+			return false
 
 	if card["effects"].is_empty():
 		errors.append(location + " phải có ít nhất một effect.")

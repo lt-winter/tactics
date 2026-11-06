@@ -13,6 +13,7 @@ var attacks_used: int = 0
 var pending_attack: Dictionary = {}
 
 var dying_manager: DyingManager
+var equipment_system: EquipmentSystem
 
 func _init(
 	state: GameState,
@@ -25,15 +26,30 @@ func _init(
 	resolver = EffectResolver.new(state)
 	damage_pipeline = DamagePipeline.new(resolver)
 	dying_manager = DyingManager.new(state)
+	equipment_system = EquipmentSystem.new(state, rules)
 	turn_manager.bind_combat(self, rules)
 	turn_manager.turn_started.connect(_on_turn_started)
+	game_state.match_finished.connect(_on_match_finished)
+
+
+func _on_match_finished(_winner_id: int) -> void:
+	pending_attack.clear()
 
 
 func _on_turn_started(_player_id: int, _number: int) -> void:
 	reset_turn_counters()
 
 
+func equip_weapon(actor_id: int, card_id: int) -> ActionResult:
+	var validation: ActionResult = validator.validate_equip_weapon(actor_id, card_id)
+	if not validation.valid:
+		return validation
+	return equipment_system.commit_equip(actor_id, card_id)
+
+
 func use_rescue(rescuer_id: int, target_id: int, card_id: int) -> ActionResult:
+	if game_state.match_over:
+		return ActionResult.failure("Trận đấu đã kết thúc.")
 	dying_manager.ensure_pending_dying()
 	if not dying_manager.has_pending_dying() or dying_manager.dying_player_id != target_id:
 		return ActionResult.failure("Phải cứu đúng người trong cửa sổ hấp hối hiện tại.")
@@ -79,12 +95,12 @@ func use_tool(actor_id: int, target_id: int, card_id: int, target_card_id: int, 
 	var stealing: bool = effect["effect_id"] == "steal_card"
 	var destination: String = "hand" if stealing else "discard"
 	var owner: int = actor_id if stealing else 0
-	if not game_state.zone_manager.transfer_card(target_card_id, zone, target_id, destination, owner):
-		return ActionResult.failure("Không thể di chuyển lá bài mục tiêu.")
-	if not game_state.discard_card(actor_id, card_id):
-		var restored: bool = game_state.zone_manager.transfer_card(target_card_id, destination, owner, zone, target_id)
-		assert(restored)
-		return ActionResult.failure("Không thể sử dụng công cụ; đã hoàn trả bài mục tiêu.")
+	var moves: Array[Dictionary] = [
+		{"card_id": target_card_id, "from_zone": zone, "from_player_id": target_id, "to_zone": destination, "to_player_id": owner},
+		{"card_id": card_id, "from_zone": "hand", "from_player_id": actor_id, "to_zone": "discard", "to_player_id": 0}
+	]
+	if not game_state.zone_manager.transfer_cards(moves):
+		return ActionResult.failure("Không thể sử dụng công cụ; không có lá bài nào bị di chuyển.")
 	return ActionResult.success()
 
 
@@ -183,6 +199,8 @@ func respond_to_attack(
 	target_id: int,
 	dodge_card_id: int = 0
 ) -> ActionResult:
+	if game_state.match_over:
+		return ActionResult.failure("Trận đấu đã kết thúc.")
 	var dying_reason: String = turn_manager.get_dying_block_reason()
 	if not dying_reason.is_empty():
 		return ActionResult.failure(dying_reason)

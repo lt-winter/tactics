@@ -11,6 +11,7 @@ static func run_all() -> void:
 	_test_lethal_damage_and_rescue()
 	_test_elimination()
 	_test_dying_preempts_attack_response()
+	_test_last_survivor_wins()
 	print("=== ALL DYING SYSTEM TESTS PASSED ===")
 
 
@@ -275,6 +276,51 @@ static func _test_dying_preempts_attack_response() -> void:
 	assert(eliminated.game_state.deck.get_discard_count() == 1)
 	assert(combat.game_state.validate_state() and eliminated.game_state.validate_state())
 	print("[PASS] Dying preempts pending Dodge/damage/phase; rescue resumes and elimination cancels stale attack")
+
+
+static func _test_last_survivor_wins() -> void:
+	var combat: CombatController = _create_combat(1)
+	var state: GameState = combat.game_state
+	var winners: Array[int] = []
+	state.match_finished.connect(func(winner_id: int) -> void:
+		winners.append(winner_id)
+	)
+	for player_id: int in [4, 3]:
+		assert(combat.executor.resolver.deal_damage(player_id, 4))
+		assert(combat.finalize_dying().valid)
+	assert(not state.match_over)
+	assert(combat.use_attack(1, 2, 1).valid)
+	assert(combat.respond_to_attack(2).valid)
+	assert(state.get_player(2).is_dying())
+	state.update_match_result()
+	assert(not state.match_over and winners.is_empty())
+	assert(combat.rescue_player(2, 2, _give_heal(combat, 2)).valid)
+	assert(not state.match_over)
+	assert(combat.use_attack(1, 2, 2).valid)
+	assert(combat.respond_to_attack(2).valid)
+	assert(combat.finalize_dying().valid)
+	assert(state.match_over and state.winner_id == 1 and winners == [1])
+	assert(not combat.has_pending_response() and not combat.has_pending_dying())
+	var phase: TurnManager.Phase = combat.turn_manager.current_phase
+	var turn_number: int = combat.turn_manager.turn_number
+	assert(not combat.use_attack(1, 2, 1).valid)
+	assert(not combat.equip_weapon(1, 99).valid)
+	assert(not combat.use_heal(1, 99).valid)
+	assert(not combat.use_tool(1, 2, 99, 99, "hand").valid)
+	assert(not combat.discard_for_turn(1, 99).valid)
+	assert(not combat.respond_to_attack(2).valid)
+	assert(not combat.rescue_player(1, 2, 99).valid)
+	assert(not combat.finalize_dying().valid)
+	assert(not combat.end_turn(1).valid and not combat.advance_until_decision().valid)
+	combat.turn_manager.advance_phase()
+	combat.turn_manager.start_game()
+	assert(combat.turn_manager.current_phase == phase and combat.turn_manager.turn_number == turn_number)
+	assert(state.draw_card(1) == null)
+	assert(not combat.executor.damage_pipeline.process_damage(1, 1, 1))
+	assert(not combat.executor.resolver.deal_damage(1, 1))
+	state.update_match_result()
+	assert(winners == [1] and state.validate_state())
+	print("[PASS] Last survivor wins once, after Dying is resolved; all normal gameplay/phase/damage stops")
 
 
 static func _reduce_damage(context: DamageContext) -> void:

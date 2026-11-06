@@ -149,7 +149,7 @@ func _build_ui() -> void:
 	_create_seat(bottom, 1)
 	_selection = _label(play, "Chọn bài trên tay, rồi chọn người trên bàn.")
 	var hand_scroll: ScrollContainer = ScrollContainer.new()
-	hand_scroll.custom_minimum_size.y = 112.0
+	hand_scroll.custom_minimum_size.y = 94.0
 	hand_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	play.add_child(hand_scroll)
 	_hand = HBoxContainer.new()
@@ -216,7 +216,7 @@ func _build_sidebar(parent: Node) -> void:
 	sidebar.add_child(debug_draws)
 	_button(debug_draws, "Human: Rút 1", _debug_draw.bind(HUMAN_ID)).name = "HumanDraw"
 	_button(debug_draws, "Tiếp tục", _advance_phase).name = "DebugResume"
-	var limits: Label = _label(sidebar, "Chia 4 lá; rút 2 lá ở giai đoạn rút bài.\nTay Bot hiện khi đến lượt · DEBUG.\nCứu bằng lá Hồi máu; HP > 0 mới sống.\nPhán xét / kiểm tra thắng chưa có.", 14)
+	var limits: Label = _label(sidebar, "Chia 4 lá; rút 2 lá ở giai đoạn rút bài.\nTay Bot hiện khi đến lượt · DEBUG.\nCứu bằng lá Hồi máu; HP > 0 mới sống.\nPhán xét / 4 hiệu ứng vũ khí chưa có.", 14)
 	limits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label(sidebar, "NHẬT KÝ BÀN CHƠI", 18).add_theme_color_override("font_color", GOLD)
 	_event_log = RichTextLabel.new()
@@ -249,6 +249,8 @@ func _new_table() -> void:
 		Player.new(3, "Bot 2", 4), Player.new(4, "Bot 3", 4)
 	]
 	game_state = GameState.new(decks.create_instances(), players)
+	game_state.zone_manager.cards_discarded.connect(_on_cards_discarded)
+	game_state.match_finished.connect(_on_match_finished)
 	var order: Array[int] = [1, 2, 3, 4]
 	combat = CombatController.new(game_state, TurnManager.new(game_state, order), rules)
 	selected_target_id = 0
@@ -257,12 +259,22 @@ func _new_table() -> void:
 	displayed_player_id = 0
 	selected_hand_card_id = 0
 	_events.clear()
+	for node: Node in find_children("*", "Button", true, false):
+		(node as Button).disabled = false
 	var started: ActionResult = combat.start_match(4)
 	if not started.valid:
 		combat.turn_manager.set_phase_wait(TurnManager.Phase.START, started.reason)
 	_record("Bàn mới: %d lá; chia 4 lá/người" % decks.get_card_count(), started)
 	if started.valid:
 		_notify("Đã chia 4 lá/người. Human rút thêm 2 lá ngay lượt đầu, có 6 lá để sử dụng.")
+
+
+func _on_cards_discarded(card_names: PackedStringArray) -> void:
+	_notify("Vào chồng bài bỏ: " + ", ".join(card_names))
+
+
+func _on_match_finished(winner_id: int) -> void:
+	_notify("Trận đấu kết thúc — %s thắng cuộc!" % _name(winner_id))
 
 
 func _notify(message: String) -> void:
@@ -291,10 +303,17 @@ func _refresh() -> void:
 		names.append(names[0])
 	_direction.text = "Ngược chiều kim đồng hồ: " + " → ".join(names)
 	_phase.text = "Lượt %d · %s · %s" % [combat.turn_manager.turn_number, "không còn người hợp lệ" if current == null else current.display_name, TurnManager.get_phase_display_name(combat.turn_manager.current_phase)]
+	if game_state.match_over:
+		_phase.text = "Trận đấu kết thúc · %s thắng cuộc!" % _name(game_state.winner_id)
 	_refresh_hand()
 	for player: Player in game_state.players:
 		var seat: Button = _seats[player.player_id - 1]
 		seat.text = "%s%s\nHP %d / %d · %s\n%d lá trên tay" % ["▶ " if player == current else "", player.display_name, player.hp, player.max_hp, Player.LifeState.keys()[player.life_state], player.get_hand_count()]
+		var weapon: CardInstance = combat.get_weapon(player.player_id)
+		var attack_range: Dictionary = combat.get_attack_range(player.player_id)
+		var range_text: String = "?" if attack_range.is_empty() else ("∞" if attack_range["unlimited"] else str(attack_range["value"]))
+		seat.text += "\n%s · Tầm %s" % ["Vũ khí: —" if weapon == null else weapon.definition.display_name, range_text]
+		seat.tooltip_text = "" if weapon == null else weapon.definition.description
 		seat.set_pressed_no_signal(player.player_id == selected_target_id)
 		seat.add_theme_stylebox_override("normal", _style(Color("3e4530") if player == current else Color("302c26"), GOLD if player == current else Color("62503c")))
 	_piles.text = "CHỒNG RÚT %d   /   CHỒNG BỎ %d" % [game_state.deck.get_draw_count(), game_state.deck.get_discard_count()]
@@ -315,6 +334,14 @@ func _refresh() -> void:
 	(find_child("BotDiscard", true, false) as Button).disabled = not (discarding and bot_turn)
 	(find_child("ActionConfirm", true, false) as Button).disabled = not (unblocked and current != null and selected_hand_card_id != 0 and (combat.turn_manager.current_phase == TurnManager.Phase.PLAY or discarding))
 	_selection.text = "Tay %s%s · %d lá   |   Mục tiêu: %s" % [_name(displayed_player_id), " · DEBUG" if displayed_player_id != HUMAN_ID else "", game_state.get_player(displayed_player_id).get_hand_count(), _name(selected_target_id)]
+	if game_state.match_over:
+		_prompt.text = "%s thắng cuộc!" % _name(game_state.winner_id)
+		_choice_kind = ""
+		_choice_overlay.hide()
+		for node: Node in find_children("*", "Button", true, false):
+			if node.name != "NewTable":
+				(node as Button).disabled = true
+		return
 	if combat.has_pending_dying():
 		var dying_id: int = combat.executor.dying_manager.dying_player_id
 		if _choice_kind != "dying" or _choice_target_id != dying_id:
@@ -453,6 +480,12 @@ func _attack(actor_id: int) -> void:
 	if card == null:
 		_notify("Chọn một lá bài trước.")
 		return
+	if card.definition.is_equipment():
+		var equipped: ActionResult = combat.equip_weapon(actor_id, card_id)
+		_record("%s trang bị %s" % [_name(actor_id), card.get_display_name()], equipped)
+		if equipped.valid and not card.definition.has_effect("remove_attack_limit"):
+			_notify("Tầm vũ khí đã có hiệu lực. Hiệu ứng riêng của %s chưa được triển khai." % card.definition.display_name)
+		return
 	if card.definition.has_effect("restore_hp"):
 		_record("%s dùng %s để tự hồi máu" % [_name(actor_id), card.get_display_name()], combat.use_heal(actor_id, card_id))
 		return
@@ -495,7 +528,8 @@ func _end_turn(player_id: int) -> void:
 func _discard(player_id: int) -> void:
 	if combat != null:
 		var card_id: int = selected_human_card_id if player_id == HUMAN_ID else selected_bot_card_id
-		_record("%s chọn bỏ lá #%d" % [_name(player_id), card_id], combat.discard_for_turn(player_id, card_id))
+		var card: CardInstance = _find_card(player_id, card_id)
+		_record("%s chọn bỏ %s" % [_name(player_id), "bài" if card == null else card.definition.display_name], combat.discard_for_turn(player_id, card_id))
 
 
 func _rescue(rescuer_id: int) -> void:
@@ -510,6 +544,9 @@ func _finalize_dying() -> void:
 
 func _debug_draw(player_id: int) -> void:
 	if combat == null:
+		return
+	if game_state.match_over:
+		_notify(combat.get_status_message())
 		return
 	if combat.has_pending_response() or combat.has_pending_dying():
 		_notify("Debug rút bài tạm khóa trong cửa sổ phản ứng / hấp hối.")
@@ -604,7 +641,7 @@ func _prepare_choice(kind: String, actor_id: int, target_id: int, card_id: int) 
 func _add_choice_card(card_id: int, zone: String, caption: String, hidden: bool) -> void:
 	var index: int = _choice_cards.get_child_count()
 	var button: Button = _button(_choice_cards, caption, _select_choice_card.bind(card_id, zone, index))
-	button.name = "HiddenCard%d" % index if hidden else ("RescueCard%d" % card_id if _choice_kind == "dying" else "DodgeCard%d" % card_id)
+	button.name = "HiddenCard%d" % index if hidden else ("EquipmentCard%d" % card_id if _choice_kind == "tool" else ("RescueCard%d" % card_id if _choice_kind == "dying" else "DodgeCard%d" % card_id))
 	button.custom_minimum_size = Vector2(135.0, 110.0)
 	button.toggle_mode = true
 
@@ -672,7 +709,7 @@ func _open_tool_choice(actor_id: int, target_id: int, card_id: int) -> void:
 	var effect: Dictionary = combat.executor.validator.get_tool_effect(actor_id, card_id)
 	var parameters: Dictionary = effect["parameters"]
 	_prepare_choice("tool", actor_id, target_id, card_id)
-	_choice_title.text = "%s: chọn một lá úp của %s rồi nhấn Đồng ý." % ["Cướp bài" if effect["effect_id"] == "steal_card" else "Hủy bài", _name(target_id)]
+	_choice_title.text = "%s: chọn bài của %s rồi nhấn Đồng ý.\nTrang bị ngửa; bài trên tay úp." % ["Cướp bài" if effect["effect_id"] == "steal_card" else "Hủy bài", _name(target_id)]
 	_choice_cancel.text = "Huỷ bỏ"
 	var zones: Array = parameters["target_zones"]
 	for zone: String in zones:
@@ -682,7 +719,10 @@ func _open_tool_choice(actor_id: int, target_id: int, card_id: int) -> void:
 				zone_label = "Trang bị"
 			elif zone == "judgment":
 				zone_label = "Phán xét"
-			_add_choice_card(card.instance_id, zone, "✦\nBÀI ÚP\n" + zone_label, true)
+			var face_up: bool = zone == "equipment"
+			_add_choice_card(card.instance_id, zone, card.get_display_name() + "\n" + zone_label if face_up else "✦\nBÀI ÚP\n" + zone_label, not face_up)
+			if face_up:
+				(_choice_cards.get_child(_choice_cards.get_child_count() - 1) as Button).tooltip_text = card.definition.description
 
 
 func _confirm_choice() -> void:
@@ -691,9 +731,10 @@ func _confirm_choice() -> void:
 			return
 		var target_id: int = _choice_target_id
 		var card_id: int = _choice_selected_card_id
+		var card: CardInstance = _find_card(_dying_rescuer_id, card_id)
 		_choice_kind = ""
 		_choice_overlay.hide()
-		_record("%s dùng lá #%d cứu %s" % [_name(_dying_rescuer_id), card_id, _name(target_id)], combat.rescue_player(_dying_rescuer_id, target_id, card_id))
+		_record("%s dùng %s cứu %s" % [_name(_dying_rescuer_id), "bài" if card == null else card.definition.display_name, _name(target_id)], combat.rescue_player(_dying_rescuer_id, target_id, card_id))
 		return
 	if _choice_kind not in ["response", "tool"] or _choice_selected_card_id == 0:
 		return

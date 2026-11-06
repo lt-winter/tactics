@@ -153,20 +153,18 @@ static func _test_counterclockwise_and_elimination() -> void:
 	assert(combat.turn_manager.get_current_player().player_id == 3)
 	assert(combat.end_turn(3).valid)
 	assert(combat.turn_manager.get_current_player().player_id == 1)
-	# Finalizing the current actor leaves their turn immediately, at any phase.
+	# Finalizing the current actor ends the match when exactly one survivor remains.
 	assert(combat.executor.resolver.deal_damage(1, 4))
 	assert(combat.executor.dying_manager.begin_dying(1).valid)
 	assert(combat.finalize_dying().valid)
-	assert(combat.turn_manager.get_current_player().player_id == 3)
-	assert(combat.end_turn(3).valid)
-	assert(combat.turn_manager.get_current_player().player_id == 3)
-	_eliminate(combat, 3)
+	assert(combat.game_state.match_over and combat.game_state.winner_id == 3)
+	assert(not combat.end_turn(3).valid)
 	assert(not combat.advance_until_decision().valid)
-	assert(combat.turn_manager.get_current_player() == null)
 	assert(not combat.start_game().valid)
 	var empty: CombatController = _fixture(0)
 	assert(not empty.start_game().valid)
 	assert(empty.turn_manager.get_current_player() == null)
+	assert(not empty.game_state.match_over)
 	print("[PASS] Counterclockwise 2–5 seats, eliminated/current/last seat and empty table")
 
 

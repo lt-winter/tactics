@@ -84,9 +84,11 @@ func _run() -> void:
 	assert(_ui.game_state.validate_state())
 	_test_bot_dodge()
 	_test_heal_and_cancel()
+	_test_weapon_equip()
 	_test_dying_modal_priority()
 	_test_negative_hp_rescue_cards()
 	await _test_hidden_tools()
+	_test_winner_ui()
 	_ui.queue_free()
 	await process_frame
 	print("=== PLAYABLE PROTOTYPE UI SMOKE PASSED ===")
@@ -250,7 +252,8 @@ func _select_bot(player_id: int) -> void:
 func _finish_current_turn() -> void:
 	var actor_id: int = _ui.combat.turn_manager.get_current_player().player_id
 	_press("EndTurn")
-	for step: int in range(32):
+	var discard_budget: int = _ui.game_state.get_player(actor_id).get_hand_count() + 1
+	for step: int in range(discard_budget):
 		if _ui.combat.turn_manager.current_phase != TurnManager.Phase.DISCARD:
 			assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
 			return
@@ -332,6 +335,47 @@ func _test_dying_modal_priority() -> void:
 	assert(_ui.game_state.validate_state())
 
 
+func _test_weapon_equip() -> void:
+	_press("NewTable")
+	_draw_all_for_human()
+	var crossbow: CardInstance = _first_card(1, "remove_attack_limit")
+	var rifle: CardInstance = _first_card(1, "discard_equipment_on_hit")
+	assert(crossbow != null and rifle != null)
+	var hand_before: int = _ui.game_state.get_player(1).get_hand_count()
+	_press("Card%d" % crossbow.instance_id)
+	_press("ActionCancel")
+	assert(_ui.combat.get_weapon(1) == null)
+	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before)
+	_press("Card%d" % crossbow.instance_id)
+	_press("ActionConfirm")
+	assert(_ui.combat.get_weapon(1) == crossbow)
+	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before - 1)
+	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Nỏ thần · Tầm 1"))
+	_select_human_attack()
+	_press("Seat2")
+	_press("ActionConfirm")
+	_press("ChoiceCancel")
+	_select_human_attack()
+	_press("Seat2")
+	_press("ActionConfirm")
+	assert(_ui.combat.has_pending_response())
+	_press("ChoiceCancel")
+	assert(_ui.combat.executor.attacks_used == 2)
+	_press("Card%d" % rifle.instance_id)
+	_press("ActionConfirm")
+	assert(_ui.combat.get_weapon(1) == rifle)
+	assert(_ui.game_state.deck.discard_pile.has(crossbow))
+	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Súng trường · Tầm 5"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("chưa được triển khai"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Vào chồng bài bỏ: Nỏ thần"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Vào chồng bài bỏ: Tấn công"))
+	_select_human_attack()
+	_press("Seat2")
+	_press("ActionConfirm")
+	assert(not _ui.combat.has_pending_response())
+	assert(_ui.game_state.validate_state())
+
+
 func _give_rescue_card(player_id: int) -> CardInstance:
 	for zone: String in ["draw", "discard"]:
 		var cards: Array[CardInstance] = _ui.game_state.deck.draw_pile if zone == "draw" else _ui.game_state.deck.discard_pile
@@ -390,6 +434,9 @@ func _test_hidden_tools() -> void:
 		var victim: CardInstance = _first_card(1, "deal_attack")
 		assert(tool != null and victim != null)
 		assert(_ui.game_state.transfer_player_card(victim.instance_id, 1, "hand", 2, "hand"))
+		var equipment: CardInstance = _first_card(1, "remove_attack_limit")
+		assert(equipment != null)
+		assert(_ui.game_state.transfer_player_card(equipment.instance_id, 1, "hand", 2, "equipment"))
 		_ui._refresh()
 		_press("Card%d" % tool.instance_id)
 		_press("Seat2")
@@ -400,6 +447,10 @@ func _test_hidden_tools() -> void:
 		assert(back != null and back.text.contains("BÀI ÚP"))
 		assert(not back.text.contains(victim.definition.display_name))
 		assert(back.tooltip_text.is_empty())
+		var face_up: Button = _ui.find_child("EquipmentCard%d" % equipment.instance_id, true, false) as Button
+		assert(face_up != null and face_up.text.contains(equipment.definition.display_name))
+		assert(not face_up.text.contains("BÀI ÚP"))
+		assert(face_up.tooltip_text == equipment.definition.description)
 		_press("ChoiceCancel")
 		assert(_ui.game_state.get_player(1).get_hand_count() == hand_before)
 		_press("ActionConfirm")
@@ -409,4 +460,34 @@ func _test_hidden_tools() -> void:
 		await _click("ChoiceConfirm")
 		assert(_ui.game_state.get_player(2).hand.is_empty())
 		assert(_ui.game_state.get_player(1).get_hand_count() == hand_before - (0 if effect_id == "steal_card" else 1))
+		var next_tool: CardInstance = _first_card(1, effect_id)
+		assert(next_tool != null)
+		_press("Card%d" % next_tool.instance_id)
+		_press("ActionConfirm")
+		_press("EquipmentCard%d" % equipment.instance_id)
+		assert(_ui.combat.get_weapon(2) == equipment)
+		_press("ChoiceConfirm")
+		assert(_ui.combat.get_weapon(2) == null)
+		assert(not _ui.combat.executor.validator.rule_engine.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
 		assert(_ui.game_state.validate_state())
+
+
+func _test_winner_ui() -> void:
+	_press("NewTable")
+	for player_id: int in [2, 3, 4]:
+		assert(_ui.combat.executor.resolver.deal_damage(player_id, 4))
+		_ui._refresh()
+		assert(not _ui.game_state.match_over)
+		_press("ChoiceCancel")
+	assert(_ui.game_state.match_over and _ui.game_state.winner_id == 1)
+	assert((_ui.find_child("PhaseLabel", true, false) as Label).text.contains("Human thắng cuộc"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Human thắng cuộc"))
+	assert((_ui.find_child("EndTurn", true, false) as Button).disabled)
+	assert((_ui.find_child("HumanDraw", true, false) as Button).disabled)
+	assert(not (_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
+	var before_hand: int = _ui.game_state.get_player(1).get_hand_count()
+	_press("HumanDraw")
+	assert(_ui.game_state.get_player(1).get_hand_count() == before_hand)
+	_press("NewTable")
+	assert(not _ui.game_state.match_over and _ui.game_state.winner_id == 0)
+	assert(not (_ui.find_child("EndTurn", true, false) as Button).disabled)

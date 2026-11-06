@@ -1,89 +1,182 @@
-
 {
   "cards": [
-    {
-      "id": "attack",
-      "name": "Tấn công",
-      "category": "basic",
-      "subcategory": "attack",
-      "description": "Gây 1 sát thương lên mục tiêu trong tầm đánh.",
-      "effects": [
-        {
-          "effect_id": "deal_attack",
-          "parameters": {
-            "damage": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "dodge",
-      "name": "Né tránh",
-      "category": "basic",
-      "subcategory": "defense",
-      "description": "Vô hiệu hóa một đòn tấn công.",
-      "effects": [
-        {
-          "effect_id": "block_attack",
-          "parameters": {}
-        }
-      ]
-    },
-    {
-      "id": "heal",
-      "name": "Hồi máu",
-      "category": "basic",
-      "subcategory": "recovery",
-      "description": "Hồi 1 máu cho mục tiêu",
-      "effects": [
-        {
-          "effect_id": "restore_hp",
-          "parameters": {
-            "amount": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "discard",
-      "name": "Hủy bài",
-      "category": "tool",
-      "subcategory": "instant",
-      "description": "Hủy một lá bài của người chơi khác.",
-      "effects": [
-        {
-          "effect_id": "discard",
-          "parameters": {
-            "card_count": 1,
-            "target_zones": [
-              "hand",
-              "equipment",
-              "judgment"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "steal",
-      "name": "Cướp bài",
-      "category": "tool",
-      "subcategory": "instant",
-      "description": "Cướp một lá bài của người chơi khác trong tầm 1.",
-      "effects": [
-        {
-          "effect_id": "steal_card",
-          "parameters": {
-            "card_count": 1,
-            "max_distance": 1,
-            "target_zones": [
-              "hand",
-              "equipment",
-              "judgment"
-            ]
-          }
-        }
-      ]
-    }
+	{
+	  "id": "attack",
+	  "name": "Tấn công",
+	  "category": "basic",
+	  "subcategory": "attack",
+	  "description": "Gây 1 sát thương lên mục tiêu trong tầm đánh.",
+	  "effects": [
+		{
+		  "effect_id": "deal_attack",
+		  "parameters": {
+			"damage": 1
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "dodge",
+	  "name": "Né tránh",
+	  "category": "basic",
+	  "subcategory": "defense",
+	  "description": "Vô hiệu hóa một đòn tấn công.",
+	  "effects": [
+		{
+		  "effect_id": "block_attack",
+		  "parameters": {}
+		}
+	  ]
+	},
+	{
+	  "id": "heal",
+	  "name": "Hồi máu",
+	  "category": "basic",
+	  "subcategory": "recovery",
+	  "description": "Hồi 1 máu cho mục tiêu",
+	  "effects": [
+		{
+		  "effect_id": "restore_hp",
+		  "parameters": {
+			"amount": 1
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "discard",
+	  "name": "Hủy bài",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Hủy một lá bài của người chơi khác.",
+	  "effects": [
+		{
+		  "effect_id": "discard",
+		  "parameters": {
+			"card_count": 1,
+			"target_zones": ["hand", "equipment", "judgment"]
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "steal",
+	  "name": "Cướp bài",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Cướp một lá bài của người chơi khác trong tầm 1.",
+	  "effects": [
+		{
+		  "effect_id": "steal_card",
+		  "parameters": {
+			"card_count": 1,
+			"max_distance": 1,
+			"target_zones": ["hand", "equipment", "judgment"]
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "crossbow",
+	  "name": "Nỏ thần",
+	  "category": "equipment",
+	  "subcategory": "weapon",
+	  "description": "Trong giai đoạn hành động, không giới hạn số lần sử dụng [Tấn Công].",
+	  "equipment_slot": "weapon",
+	  "range": 1,
+	  "effects": [
+		{
+		  "effect_id": "remove_attack_limit",
+		  "parameters": {}
+		}
+	  ]
+	},
+	{
+	  "id": "butchers_knife",
+	  "name": "Dao phây",
+	  "category": "equipment",
+	  "subcategory": "weapon",
+	  "description": "Khi [Tấn Công] chuẩn bị gây sát thương, có thể ngăn sát thương này và thay bằng việc chọn bỏ lần lượt tối đa 2 lá trên tay mục tiêu. Nếu mục tiêu chỉ có 1 lá thì bỏ 1 lá.",
+	  "equipment_slot": "weapon",
+	  "range": 2,
+	  "effects": [
+		{
+		  "effect_id": "replace_attack_damage_with_discard",
+		  "parameters": {
+			"discard_count": 2,
+			"optional": true,
+			"selection": "attacker",
+			"selection_mode": "sequential",
+			"target_zone": "hand",
+			"allow_partial": true,
+			"min_target_cards": 1,
+			"reveal_before_selection": false
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "slingshot",
+	  "name": "Ná cao su",
+	  "category": "equipment",
+	  "subcategory": "weapon",
+	  "description": "Sau khi [Tấn Công] gây sát thương thành công, có thể bỏ 1 lá trên tay mình để gây 1 sát thương cho một người chơi khác trong tầm 1 của mục tiêu.",
+	  "equipment_slot": "weapon",
+	  "range": 3,
+	  "effects": [
+		{
+		  "effect_id": "secondary_damage_on_hit",
+		  "parameters": {
+			"cost_discard": 1,
+			"cost_zone": "hand",
+			"cost_owner": "damage_source",
+			"secondary_damage": 1,
+			"secondary_range": 1,
+			"range_origin": "primary_target",
+			"exclude_primary_target": true,
+			"optional": true
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "pistol",
+	  "name": "Súng lục",
+	  "category": "equipment",
+	  "subcategory": "weapon",
+	  "description": "Khi sử dụng [Tấn Công], có thể chọn thêm 1 mục tiêu hợp lệ trong tầm đánh.",
+	  "equipment_slot": "weapon",
+	  "range": 4,
+	  "effects": [
+		{
+		  "effect_id": "additional_attack_target",
+		  "parameters": {
+			"additional_targets": 1,
+			"optional": true,
+			"unique_targets": true
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "rifle",
+	  "name": "Súng trường",
+	  "category": "equipment",
+	  "subcategory": "weapon",
+	  "description": "Sau khi [Tấn Công] gây sát thương thành công, có thể chọn bỏ 1 trang bị của mục tiêu.",
+	  "equipment_slot": "weapon",
+	  "range": 5,
+	  "effects": [
+		{
+		  "effect_id": "discard_equipment_on_hit",
+		  "parameters": {
+			"discard_count": 1,
+			"target_zone": "equipment",
+			"selection": "attacker",
+			"optional": true
+		  }
+		}
+	  ]
+	}
   ]
 }

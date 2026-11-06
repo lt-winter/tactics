@@ -35,6 +35,19 @@ func start_match(initial_cards: int = 4) -> ActionResult:
 	return start_game()
 
 
+func equip_weapon(actor_id: int, card_id: int) -> ActionResult:
+	return executor.equip_weapon(actor_id, card_id)
+
+
+func get_weapon(player_id: int) -> CardInstance:
+	return executor.equipment_system.get_weapon(player_id)
+
+
+func get_attack_range(player_id: int) -> Dictionary:
+	var context: RuleContext = RuleContext.new(player_id)
+	return executor.validator.rule_engine.get_rule("attack_range", {}, context)
+
+
 func use_heal(actor_id: int, card_id: int) -> ActionResult:
 	return executor.use_heal(actor_id, card_id)
 
@@ -47,6 +60,9 @@ func start_game() -> ActionResult:
 	var blocked: String = turn_manager.get_transition_block_reason()
 	if not blocked.is_empty():
 		return ActionResult.failure(blocked)
+	game_state.update_match_result()
+	if game_state.match_over:
+		return ActionResult.success()
 	turn_manager.start_game()
 	_sync_turn_counter()
 	return advance_until_decision()
@@ -107,7 +123,7 @@ func discard_for_turn(player_id: int, card_id: int) -> ActionResult:
 
 
 func _resume_after(result: ActionResult) -> ActionResult:
-	if result.valid:
+	if result.valid and not game_state.match_over:
 		# A completed action remains successful even if a later phase is held.
 		# The hold/budget/no-player status is available through get_status_message().
 		advance_until_decision()

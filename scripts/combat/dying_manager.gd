@@ -50,6 +50,8 @@ func rescue_player(
 	target_id: int,
 	heal_amount: int = 1
 ) -> ActionResult:
+	if game_state.match_over:
+		return ActionResult.failure("Trận đấu đã kết thúc.")
 	if not has_pending_dying():
 		return ActionResult.failure(
 			"Không có người chơi đang chờ cứu."
@@ -88,11 +90,14 @@ func rescue_player(
 			)
 
 		dying_player_id = 0
+		game_state.update_match_result()
 
 	return ActionResult.success()
 
 
 func finalize_dying() -> ActionResult:
+	if game_state.match_over:
+		return ActionResult.failure("Trận đấu đã kết thúc.")
 	if not has_pending_dying():
 		return ActionResult.failure(
 			"Không có người chơi đang chờ xử lý."
@@ -114,4 +119,5 @@ func finalize_dying() -> ActionResult:
 		)
 
 	dying_player_id = 0
+	game_state.update_match_result()
 	return ActionResult.success()

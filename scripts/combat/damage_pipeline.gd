@@ -36,7 +36,7 @@ func process_damage(
 	target_id: int,
 	amount: int
 ) -> bool:
-	if amount <= 0:
+	if resolver.game_state.match_over or amount <= 0:
 		return false
 
 	var source: Player = resolver.game_state.get_player(source_id)

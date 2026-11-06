@@ -8,6 +8,8 @@ var category: String
 var subcategory: String
 var description: String
 var effects: Array[Dictionary] = []
+var equipment_slot: String = ""
+var attack_range: int = 0
 
 
 func _init(data: Dictionary) -> void:
@@ -16,6 +18,8 @@ func _init(data: Dictionary) -> void:
 	category = data["category"]
 	subcategory = data["subcategory"]
 	description = data["description"]
+	equipment_slot = str(data.get("equipment_slot", ""))
+	attack_range = int(data.get("range", 0))
 
 	for effect in data["effects"]:
 		effects.append(effect.duplicate(true))

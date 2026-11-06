@@ -196,7 +196,105 @@ static func run_all() -> void:
 
 	_test_tool_actions()
 	_test_heal_card()
+	_test_equipment()
 	print("=== ALL ACTION EXECUTOR TESTS PASSED ===")
+
+
+static func _test_equipment() -> void:
+	var database: CardDatabase = CardDatabase.new()
+	assert(database.load_from_file("res://data/cards.json"))
+	var ids: Array[String] = ["crossbow", "butchers_knife", "slingshot", "pistol", "rifle", "crossbow", "attack", "attack", "attack", "discard", "steal"]
+	var cards: Array[CardInstance] = []
+	for index: int in range(ids.size()):
+		cards.append(CardInstance.new(index + 1, database.get_definition(ids[index]), CardInstance.Suit.SPADES, 1))
+	var players: Array[Player] = []
+	for player_id: int in range(1, 13):
+		players.append(Player.new(player_id, "Seat %d" % player_id, 4))
+	var state: GameState = GameState.new(cards, players)
+	var turns: TurnManager = TurnManager.new(state)
+	turns.draw_count_per_turn = 0
+	var rules: RuleEngine = RuleEngine.new()
+	assert(rules.load_base_rules("res://data/rules/base_rules.json"))
+	var combat: CombatController = CombatController.new(state, turns, rules)
+	var discarded_names: Array[String] = []
+	state.zone_manager.cards_discarded.connect(func(names: PackedStringArray) -> void:
+		discarded_names.append(", ".join(names))
+	)
+	for card: CardInstance in cards:
+		assert(state.zone_manager.transfer_card(card.instance_id, "draw", 0, "hand", 2 if card.instance_id == 6 else 1))
+	assert(not combat.equip_weapon(1, 1).valid)
+	assert(combat.start_game().valid)
+	assert(not combat.equip_weapon(2, 6).valid)
+	assert(not combat.equip_weapon(1, 7).valid)
+	assert(not combat.equip_weapon(1, 9999).valid)
+	var hand_count: int = players[0].get_hand_count()
+	assert(combat.equip_weapon(1, 1).valid)
+	assert(combat.get_weapon(1).instance_id == 1)
+	assert(players[0].get_hand_count() == hand_count - 1 and state.deck.get_discard_count() == 0)
+	assert(not combat.use_attack(1, 3, 7).valid)
+	assert(combat.use_attack(1, 2, 7).valid)
+	assert(not combat.equip_weapon(1, 5).valid)
+	assert(not combat.executor.equip_weapon(1, 5).valid)
+	assert(combat.respond_to_attack(2).valid)
+	assert(combat.use_attack(1, 2, 8).valid)
+	assert(combat.respond_to_attack(2).valid)
+	assert(combat.executor.attacks_used == 2)
+	assert(combat.equip_weapon(1, 5).valid)
+	assert(combat.get_weapon(1).instance_id == 5 and combat.get_attack_range(1)["value"] == 5)
+	assert(state.deck.discard_pile.has(cards[0]) and state.deck.get_discard_count() == 3)
+	assert(discarded_names == ["Tấn công", "Tấn công", "Nỏ thần"])
+	assert(combat.executor.attacks_used == 2)
+	assert(not rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(1))["unlimited"])
+	assert(not combat.use_attack(1, 2, 9).valid)
+	# Independent range boundary check on a 12-seat fixture, not the 4-seat UI.
+	combat.executor.reset_turn_counters()
+	assert(not combat.use_attack(1, 7, 9).valid)
+	assert(combat.use_attack(1, 6, 9).valid)
+	assert(combat.respond_to_attack(6).valid)
+	assert(combat.equip_weapon(1, 2).valid)
+	assert(combat.get_attack_range(1)["value"] == 2)
+	rules.add_modifier(RuleModifier.new("attack_range", "set", 7, RuleModifier.Source.CHARACTER_SKILL, "equipment_test_skill", 1))
+	assert(combat.equip_weapon(1, 3).valid)
+	assert(combat.get_attack_range(1)["value"] == 7)
+	rules.remove_modifier("equipment_test_skill")
+	assert(combat.get_attack_range(1)["value"] == 3)
+	assert(combat.executor.attacks_used == 1)
+	assert(state.zone_manager.transfer_card(6, "hand", 2, "equipment", 2))
+	assert(rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
+	assert(not rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(1))["unlimited"])
+	assert(not state.zone_manager.transfer_card(4, "hand", 1, "equipment", 2))
+	assert(combat.use_tool(1, 2, 10, 6, "equipment").valid)
+	assert(combat.get_weapon(2) == null)
+	assert(not rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
+	assert(state.zone_manager.transfer_card(6, "discard", 0, "equipment", 2))
+	assert(combat.use_tool(1, 2, 11, 6, "equipment").valid)
+	assert(combat.get_weapon(2) == null and players[0].hand.has(cards[5]))
+	assert(combat.get_weapon(1).instance_id == 3)
+	assert(not rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
+	assert(combat.equip_weapon(1, 6).valid)
+	assert(rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(1))["unlimited"])
+	var before_discard: Array[CardInstance] = state.deck.discard_pile.duplicate()
+	var before_log_count: int = discarded_names.size()
+	var invalid_batch: Array[Dictionary] = [
+		{"card_id": 6, "from_zone": "equipment", "from_player_id": 1, "to_zone": "discard", "to_player_id": 0},
+		{"card_id": 99999, "from_zone": "hand", "from_player_id": 1, "to_zone": "equipment", "to_player_id": 1}
+	]
+	assert(not state.zone_manager.transfer_cards(invalid_batch))
+	assert(discarded_names.size() == before_log_count)
+	assert(state.deck.discard_pile == before_discard and combat.get_weapon(1).instance_id == 6)
+	assert(rules.get_rule("attack_limit_per_turn", {}, RuleContext.new(1))["unlimited"])
+	turns.set_phase_wait(TurnManager.Phase.PLAY, "Unresolved effect")
+	assert(not combat.equip_weapon(1, 4).valid)
+	turns.set_phase_wait(TurnManager.Phase.PLAY, "")
+	assert(combat.executor.resolver.deal_damage(2, 2))
+	assert(combat.has_pending_dying())
+	assert(not combat.equip_weapon(1, 4).valid)
+	assert(not combat.executor.equip_weapon(1, 4).valid)
+	assert(combat.finalize_dying().valid)
+	assert(turns.end_play(1).valid)
+	assert(not combat.equip_weapon(1, 4).valid)
+	assert(state.validate_state())
+	print("[PASS] Weapon equip/replace, free equip, range 1..5, Crossbow count, skill precedence, Huy/Cuop detach, atomic slot/failed batch and window guards")
 
 
 static func _test_heal_card() -> void:

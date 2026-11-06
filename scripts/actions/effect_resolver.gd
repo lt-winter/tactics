@@ -13,6 +13,8 @@ func deal_damage(
 	target_id: int,
 	amount: int
 ) -> bool:
+	if game_state.match_over:
+		return false
 	var target: Player = game_state.get_player(target_id)
 
 	if target == null:
@@ -36,6 +38,8 @@ func restore_hp(
 	target_id: int,
 	amount: int
 ) -> bool:
+	if game_state.match_over:
+		return false
 	var target: Player = game_state.get_player(target_id)
 
 	if target == null:

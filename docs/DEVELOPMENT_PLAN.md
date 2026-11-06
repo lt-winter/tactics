@@ -42,6 +42,34 @@
 - Finish judgment phase and game-end transitions.
 - Paid healing-card rescue implemented under the latest approved rule: self or another living player, one owned card per use, preserve negative HP, close only above zero. Ordered pass/timing protocol remains OPEN. Descriptions use cards.json; effect values remain in JSON parameters.
 
+## Weapon System v1.0 — sau các milestone nền tảng
+
+**Latest authorized exception to the full-trigger roadmap:** basic equip/replace, range modifiers and Nỏ thần passive are implemented independently of F1/F2, under the approved rule: equip during own PLAY, no extra cost, replaced weapon to discard. The user already added five weapon definitions/copies; this change preserves that data. No voluntary unequip or four active weapon abilities are implemented. Full W3–W7 still require the pending/damage foundations and remaining gameplay decisions below.
+
+**Additional approved prototype work completed:** discard-pile notifications by card names, face-up equipment in Hủy/Cướp pickers, and last-survivor match termination after Dying is resolved. This is a survivor win rule, not role-based victory implementation. See DEVELOPMENT_STATUS.md for current executed checks.
+
+**Thiết kế đầy đủ vẫn đang chờ duyệt; phần trang bị cơ bản đã được duyệt và triển khai như ghi ở trên.** Tham chiếu: [WEAPON_SYSTEM_DESIGN.md](WEAPON_SYSTEM_DESIGN.md). Không tự bổ sung bản sao hoặc sửa JSON bộ bài.
+
+Thứ tự phụ thuộc: Stage 0.3 và các sửa nền tảng F0 → F1 → F2 → các mốc W. Các follow-up hồi máu/cứu bằng bài hiện có phải được giữ nguyên; không cần chờ toàn bộ roles/AI hoàn tất mới thiết kế equipment.
+
+| Mốc | Phạm vi nhỏ và điều kiện bắt đầu |
+|---|---|
+| D0 — tài liệu | Đối chiếu API/source, thiết kế slot/Attack/event/decision/replacement, ghi các luật OPEN; nhiệm vụ hiện tại dừng ở đây |
+| F0 — nền tảng trước vũ khí | Sửa `GameState.validate_state()` phù hợp DYING âm; thống nhất distance theo ghế authoritative; hoàn tất contract damage/Dying Stage 0.3. Hiện chỉ ghi nhận và đề xuất, chưa sửa code |
+| F1 — nền tảng trước vũ khí | AttackContext một target, DamageResult/source kind; giữ `use_attack`, `respond_to_attack`, `process_damage` compatibility adapters |
+| F2 — nền tảng trước vũ khí | PendingDecision, continuation stack có giới hạn, controlled checkpoints và guard chung cho direct calls/Debug; resume combat trước auto-phase |
+| W1 | Weapon slot + equip/replace/unequip/destroy lifecycle và batch transfers; modifier theo instance/activation. Cần chốt luật equip/đích đến trước khi bật gameplay |
+| W2 | Nỏ Thần: range và remove_limit bằng RuleModifier; không bypass validation và không reset count khi tháo |
+| W3 | Dao Phây: generic damage replacement; chốt thiếu hai lá, người chọn/visibility và timing defense trước coding nhánh B |
+| W4 | Ná Cao Su: optional cost/target, actual damage trigger, range từ primary, child damage/Dying; chốt lifetime/target policies |
+| W5 | Súng lục: một payment/count, hai target/response; chốt resolution order và revalidation giữa targets |
+| W6 | Súng trường: chọn/discard equipment và detach modifier cùng commit; chốt chooser và target/Dying timing |
+| W7 | UI slot/range/optional/multi-target/cost/equipment picker và tích hợp; cập nhật tài liệu và kiểm chứng đầy đủ |
+
+Mỗi mốc phải giữ 13 regression suites, thêm test nền tảng/vũ khí theo design và UI smoke với warnings-as-errors. Mốc sau chỉ bắt đầu khi dependency đạt và được phê duyệt; thông số OPEN không có default ngầm. Test fixture có thể dùng definition tạm/in-memory; thêm bản sao vũ khí vào bộ bài thật là một thay đổi riêng cần yêu cầu.
+
+Các quyết định còn thiếu được đánh số G1–G12 trong thiết kế: equip/cleanup; Dao thiếu bài/người chọn/timing; Ná eligibility và trạng thái sau Dying; thứ tự Súng lục; hiệu lực snapshot/live; người chọn equipment; trigger ties và commit cost. Danh sách này không thay đổi các luật đã chốt trong GDD.
+
 ## Stage 2 — Full approved MVP card deck
 - Finalize 48-card distribution with designer approval.
 - Implement remaining tool/equipment effects and weapon range.
@@ -83,3 +111,5 @@ For each task:
 
 ## Next milestone boundary
 Stage 0.1, Stage 0.2 / Prototype UI v0.2 and subsequent explicitly requested UI/healing/paid-rescue follow-ups are implemented. Read `AGENTS.md` and `docs/` for future tasks; **do not start centralized Stage 0.3 or other milestones without a new instruction**. Ordered rescue passes/timing, roles/victory and skills remain outside this change.
+
+Weapon System v1.0 đầy đủ vẫn là roadmap. Sau nhiệm vụ thiết kế, người dùng đã duyệt và nhận phần equip/replace cơ bản, range và Nỏ thần, cùng discard log/survivor win/equipment visibility. Dừng ở phạm vi đã duyệt này; không tự bắt đầu F0/F1/F2, voluntary unequip hoặc W3–W7. Giữ nguyên JSON do người dùng đã bổ sung.

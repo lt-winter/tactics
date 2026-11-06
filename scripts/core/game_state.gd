@@ -2,14 +2,34 @@
 class_name GameState
 extends RefCounted
 
+signal match_finished(winner_id: int)
+
 var players: Array[Player] = []
 var deck: Deck
 var zone_manager: CardZoneManager
 var opening_hands_dealt: bool = false
+var match_over: bool = false
+var winner_id: int = 0
+
+
+func update_match_result() -> void:
+	if match_over:
+		return
+	var survivors: Array[Player] = []
+	for player: Player in players:
+		# DYING still occupies a seat and retains the right to be rescued.
+		if player.is_dying() or (not player.is_eliminated() and player.hp <= 0):
+			return
+		if not player.is_eliminated():
+			survivors.append(player)
+	if survivors.size() == 1 and survivors[0].is_alive():
+		winner_id = survivors[0].player_id
+		match_over = true
+		match_finished.emit(winner_id)
 
 
 func deal_initial_hands(count: int, order: Array[int]) -> ActionResult:
-	if opening_hands_dealt or count < 1 or order.size() != players.size() or players.is_empty():
+	if match_over or opening_hands_dealt or count < 1 or order.size() != players.size() or players.is_empty():
 		return ActionResult.failure("Không thể chia lại bài đầu hoặc cấu hình không hợp lệ.")
 	var seen: Dictionary = {}
 	for player_id: int in order:
@@ -55,7 +75,7 @@ func get_player(player_id: int) -> Player:
 
 
 func draw_card(player_id: int) -> CardInstance:
-	if get_player(player_id) == null:
+	if match_over or get_player(player_id) == null:
 		return null
 
 	if deck.draw_pile.is_empty():
@@ -85,6 +105,8 @@ func discard_card(
 	card_id: int,
 	from_zone: String = "hand"
 ) -> bool:
+	if match_over:
+		return false
 	return zone_manager.transfer_card(
 		card_id,
 		from_zone,
@@ -101,6 +123,8 @@ func transfer_player_card(
 	to_player_id: int,
 	to_zone: String
 ) -> bool:
+	if match_over:
+		return false
 	return zone_manager.transfer_card(
 		card_id,
 		from_zone,

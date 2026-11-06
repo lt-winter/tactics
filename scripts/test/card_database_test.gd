@@ -20,12 +20,17 @@ static func run_all() -> void:
 
 	print("=== CARD DATABASE TEST ===")
 
-	assert(database.get_card_count() == 5)
+	assert(database.get_card_count() == 10)
 	assert(database.has_card("attack"))
 	assert(database.has_card("dodge"))
 	assert(database.has_card("heal"))
 	assert(database.has_card("discard"))
 	assert(database.has_card("steal"))
+	var weapon_ids: Array[String] = ["crossbow", "butchers_knife", "slingshot", "pistol", "rifle"]
+	for index: int in range(weapon_ids.size()):
+		var weapon: CardDefinition = database.get_definition(weapon_ids[index])
+		assert(weapon != null and weapon.is_equipment())
+		assert(weapon.equipment_slot == "weapon" and weapon.attack_range == index + 1)
 
 	var attack := database.get_card("attack")
 	assert(attack["category"] == "basic")
@@ -47,4 +52,28 @@ static func run_all() -> void:
 			% [card["id"], card["name"], card["category"]]
 		)
 
+	_test_weapon_schema(database)
 	print("PASS: CardDatabase")
+
+
+static func _test_weapon_schema(database: CardDatabase) -> void:
+	var fixture_path: String = "res://__weapon_schema_%d.json" % Time.get_ticks_usec()
+	for bad_range: Variant in [0, -1, 1.5, true, "2", null]:
+		var weapon: Dictionary = database.get_card("crossbow")
+		weapon["range"] = bad_range
+		var file: FileAccess = FileAccess.open(fixture_path, FileAccess.WRITE)
+		assert(file != null)
+		file.store_string(JSON.stringify({"cards": [weapon]}))
+		file.close()
+		var invalid: CardDatabase = CardDatabase.new()
+		assert(not invalid.load_from_file(fixture_path))
+		assert(not invalid.get_errors().is_empty() and invalid.get_card_count() == 0)
+	var weapon: Dictionary = database.get_card("crossbow")
+	weapon["equipment_slot"] = "hand"
+	var file: FileAccess = FileAccess.open(fixture_path, FileAccess.WRITE)
+	assert(file != null)
+	file.store_string(JSON.stringify({"cards": [weapon]}))
+	file.close()
+	var invalid: CardDatabase = CardDatabase.new()
+	assert(not invalid.load_from_file(fixture_path))
+	assert(DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path)) == OK)

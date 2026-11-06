@@ -17,6 +17,23 @@ func _init(
 	rule_engine = rules
 
 
+func validate_equip_weapon(actor_id: int, card_id: int) -> ActionResult:
+	var blocked: String = turn_manager.get_transition_block_reason()
+	if blocked.is_empty():
+		blocked = turn_manager.get_effect_wait_reason()
+	if not blocked.is_empty():
+		return ActionResult.failure(blocked)
+	var actor: Player = turn_manager.get_current_player()
+	if actor == null or actor.player_id != actor_id or not actor.is_alive() or turn_manager.current_phase != TurnManager.Phase.PLAY:
+		return ActionResult.failure("Chỉ trang bị vũ khí cho bản thân trong giai đoạn sử dụng bài của mình.")
+	for card: CardInstance in actor.hand:
+		if card.instance_id == card_id:
+			if card.definition.is_equipment() and card.definition.equipment_slot == "weapon" and card.definition.attack_range > 0:
+				return ActionResult.success()
+			return ActionResult.failure("Lá đã chọn không phải vũ khí hợp lệ.")
+	return ActionResult.failure("Không sở hữu lá vũ khí đã chọn.")
+
+
 func validate_rescue(rescuer_id: int, target_id: int, card_id: int) -> ActionResult:
 	var rescuer: Player = game_state.get_player(rescuer_id)
 	var target: Player = game_state.get_player(target_id)

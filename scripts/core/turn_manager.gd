@@ -57,6 +57,9 @@ static func get_phase_display_name(phase: Phase) -> String:
 
 
 func get_transition_block_reason() -> String:
+	if game_state.match_over:
+		var winner: Player = game_state.get_player(game_state.winner_id)
+		return "Trận đấu đã kết thúc. %s thắng cuộc!" % winner.display_name
 	var dying_reason: String = get_dying_block_reason()
 	if not dying_reason.is_empty():
 		return dying_reason

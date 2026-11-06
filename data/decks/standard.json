@@ -60,6 +60,26 @@
 		{ "suit": 0, "rank": 4 },
 		{ "suit": 2, "rank": 3 }
 	  ]
+	},
+	{
+	  "card_id": "crossbow",
+	  "copies": [{ "suit": 2, "rank": 1 }]
+	},
+	{
+	  "card_id": "butchers_knife",
+	  "copies": [{ "suit": 0, "rank": 2 }]
+	},
+	{
+	  "card_id": "slingshot",
+	  "copies": [{ "suit": 2, "rank": 12 }]
+	},
+	{
+	  "card_id": "pistol",
+	  "copies": [{ "suit": 2, "rank": 12 }]
+	},
+	{
+	  "card_id": "rifle",
+	  "copies": [{ "suit": 1, "rank": 5 }]
 	}
   ]
 }

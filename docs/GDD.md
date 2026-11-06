@@ -18,7 +18,7 @@
 - Sheriff role is public; other roles hidden until the applicable reveal rule is implemented.
 - Proposed Sheriff bonus: +1 maximum HP.
 - Approved prototype opening: **4 cards for each of the four players**, dealt once before turns begin. **Every turn, including each player's first turn, includes the normal 2-card DRAW.** Human therefore enters the first PLAY with 6 cards; Bots hold 4 until their turn and then draw 2. This latest correction supersedes the earlier first-DRAW skip. A deck too small for the full opening deal is rejected before any card moves.
-- Match ends by role victory conditions, not simply by running out of cards.
+- Approved prototype win rule: when exactly one non-eliminated player remains alive and no player is DYING, stop the match and announce that survivor as winner. Resolve Dying/rescue first; zero survivors does not invent a winner. Role-based victory below remains a future proposal. Deck exhaustion alone does not decide the match.
 
 ## 3. Role objectives — provisional interpretation
 - **Sheriff:** eliminate all opposing roles while remaining alive.
@@ -43,6 +43,8 @@ Phase enum remains `START -> JUDGMENT -> DRAW -> PLAY -> DISCARD -> END -> next 
 - **OPEN:** triggered ability timing and role-based victory remain undefined. The current-player elimination transition is now implemented as skipping that eliminated seat once pending windows are resolved.
 
 ## 5. Combat and distance
+- Approved basic weapon equip: during their own PLAY, a living player may equip a weapon from their hand onto themselves without an extra card cost. One weapon slot; replacing discards the old weapon and equips the new one as one batch. Attack/Dying windows and unresolved phase effects block equip. No voluntary unequip rule is added.
+- Weapon ranges 1–5 and Crossbow/Nỏ thần's unlimited Attack count are implemented via CARD_EFFECT RuleModifiers, preserving character-skill priority and all other validation. Moving a weapon out of equipment removes its passive effect immediately, including Hủy/Cướp; stealing it into hand does not equip it. The four other weapon special effects remain unimplemented and UI reports this limit.
 - Base attack range: 1 seat.
 - Base limit: one attack card per turn.
 - Circular distance = minimum clockwise/counterclockwise seat separation among participants who still occupy seats.
@@ -52,7 +54,8 @@ Phase enum remains `START -> JUDGMENT -> DRAW -> PLAY -> DISCARD -> END -> next 
 - Healing-card use: a living, wounded player may use their own `restore_hp` card during their own PLAY to heal themselves by the JSON `amount`, capped at max HP. It consumes exactly one card on success; full HP, wrong turn/phase/ownership, unresolved effects and Attack/Dying windows reject without cost. During Dying, the separate paid-rescue action below takes priority over normal healing.
 - Prototype manual controls: the lower hand follows the current actor, explicitly marked DEBUG for Bots. Select a card and any required target, then **Đồng ý** to use it (or discard it during DISCARD); **Huỷ bỏ** clears the selection without cost. Attack responses retain their separate target Dodge confirmation and explicit **Không Né** choice. The debug hand display is not a final hidden-information/AI policy.
 - Interaction: select an Attack and a target, then submit. Range/turn/ownership/limits are validated before consuming the Attack. The target's response overlay shows only their Dodge cards; selecting one does not spend it. **Đồng ý** submits that specific Dodge; **Không Né** explicitly declines. Bots remain manually controlled in the prototype.
-- Discard/Steal interaction: select the tool and another player, then choose one **face-down** card from the JSON-allowed zones and confirm. No name, suit or rank is shown on these backs. Cancelling costs nothing. Commit revalidates ownership/phase/windows/range and the chosen card, discards the played tool, and discards the victim card or transfers it into the actor's hand. Current JSON supports one chosen card; Steal has max distance 1, Discard has no max-distance parameter. There is no additional invented response or counter-tool rule.
+- Discard/Steal interaction: select the tool and another player, then select one card from the JSON-allowed zones. **Equipment is face-up** with its name/rank/suit; hand cards remain face-down without those details. Judgment visibility is unchanged. Cancelling costs nothing. Commit revalidates ownership/phase/windows/range and the chosen card, then moves victim and played tool in one batch. Steal transfers the victim into hand; Discard moves it to discard. Steal has max distance 1; Discard has no added distance restriction.
+- Every successful card transfer into the discard pile emits a notification listing **card names only**, including Attack/Dodge/heal/rescue, hand-limit discards, discarded tool/victim cards and replaced weapons. Failed or cancelled transfers do not generate discard notifications.
 - Damage modifiers may reduce/increase/cancel damage before HP is changed.
 - Damage that leaves HP at 0 or below enters DYING and **preserves negative HP**. The player remains DYING until HP is **strictly above 0**: at -1, two uses of a +1 healing card produce -1 -> 0 -> 1. Partial rescue consumes the used card but does not close the window or resume normal actions/phases.
 - The DYING player may use their own healing cards, or any other living player may use their owned healing card to rescue them, regardless of whose turn it is. Each confirmed use consumes exactly one selected card and applies its JSON amount. Wrong owner/type/target, spent or missing cards, eliminated rescuers and another DYING rescuer are rejected without payment. A blocking modal lets the operator select rescuer and card, confirm each use, or explicitly choose no rescue to finalize elimination. No automatic card selection, timeout, rescue-order protocol or AI policy is introduced.
@@ -85,14 +88,15 @@ Current `RuleModifier` operations: `set`, `remove_limit`. Additional operations 
 **Design conflict requiring approval:** A later planning summary proposed **18 Bắn!, 12 Né!, 6 Bia, 4 Cướp bóc, 4 Do thám, 2 weapons, 2 armor** (also 48). This handoff uses the earlier eight-entry breakdown as a **working baseline, not a final signed-off deck**. Ask before expanding the JSON deck.
 
 ### Actual repository state (2026-11-06)
-`data/cards.json` currently defines **five** card IDs:
+`data/cards.json` currently defines **ten** card IDs (the five weapon definitions were added by the user):
 - `attack` / `deal_attack`
 - `dodge` / `block_attack`
 - `heal` / `restore_hp`
 - `discard` / `discard`
 - `steal` / `steal_card`
+- `crossbow`, `butchers_knife`, `slingshot`, `pistol`, `rifle`: equipment_slot=weapon, range 1..5. Only passive range and remove_attack_limit are executed in the current basic equip implementation.
 
-`data/decks/standard.json` now contains the user's **34 instances**: 16 attack, 7 dodge, 7 heal, 2 discard, 2 steal, with numeric suit codes 0=spades, 1=hearts, 2=diamonds, 3=clubs. It was expanded by the user from the earlier 12-card engine test deck; it is not a final approved 48-card MVP distribution. The implementation preserves these quantities, suits, ranks and order.
+`data/decks/standard.json` now contains the user's **39 instances**: 16 attack, 7 dodge, 7 heal, 2 discard, 2 steal and one each of the five weapons, with numeric suit codes 0=spades, 1=hearts, 2=diamonds, 3=clubs. It is not the final 48-card MVP distribution. The basic equip/win/UI changes preserve the user's JSON quantities, descriptions, suits, ranks and order.
 
 **Mapping warning:** Planned 'Do thám' does not have an agreed one-to-one mapping to implemented `discard`. Do not silently rename or conflate them.
 
