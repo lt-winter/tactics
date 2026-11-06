@@ -4,6 +4,74 @@
 **Evidence standard:** implemented behavior, executed tests, and future work are recorded separately. A zero Godot process exit code alone does not establish a test pass.
 
 ## Current snapshot
+- **Latest setup/input/defense follow-up:** setup menu for 2–6 players, P1…Pn names, adaptive seating, double-click confirmation and armor slot/metadata/UI foundation. Defense effects and armor use remain unimplemented as explicitly requested. Validation recorded below; prior AOE evidence is retained separately.
+
+## Match setup, double-click and defense foundation — 2026-11-06
+
+- User confirmed defense scope: **slot/metadata and UI only, no effects**. No new armor cards or gameplay equip/replacement policies were introduced. Existing pending Attack/AOE/Dying, counterclockwise order and opening/DRAW rules are retained.
+- F6 now opens MatchSetupMenu before constructing a match. Choose 2–6 players; engine players are P1…Pn, P1 human and the rest manually controlled. New Table opens setup instead of immediately deleting the current session; cancel restores it, including its pending response. Loading/deal-capacity validation happens before session replacement. New Table/CreateMatch remain available after game over. No role distribution is invented for other counts.
+- Rebuilt dynamic seat controls retain P1's separate panel; 2–4 seats use the existing circular orientation, while 5–6 use upper/lower side seats without overlap. Engine order remains ascending IDs independently of UI nodes. All seats display the defensive slot beside weapon/range/health information.
+- Double-click on a usable hand/modal card selects and confirms through the same existing APIs as Đồng ý. Targets are still required and never auto-selected. The old button is disabled for its release to prevent duplicate submission. Single-click remains a resource-free draft; disabled cards remain inactive. Coverage includes heal, weapon equip, targeted Attack, Dodge, tool victim, AOE response, rescue and hand-limit discard.
+- Foundation: weapon and armor slots are recognized in CardDefinition; batch transfers reject a duplicate slot while allowing one weapon plus one armor. EquipmentSystem exposes a shared slot query and get_defense; controller exposes get_defense. Existing weapon APIs/modifiers remain unchanged. CardDatabase accepts inert armor with `category=equipment`, `subcategory=armor`, `equipment_slot=armor`, `effects=[]`, and rejects inconsistent/unknown slots. Armor in hand stays disabled with an unsupported-use tooltip. No defense modifier or automatic armor activation exists.
+- Files created: `scripts/dev/match_setup_menu.gd`, `scripts/test/defense_foundation_test.gd`, `scripts/test/menu_interaction_smoke.gd` and generated UIDs. Files modified in this follow-up: `scripts/dev/playable_prototype.gd`, `scripts/cards/card_definition.gd`, `scripts/cards/card_database.gd`, `scripts/core/card_zone_manager.gd`, `scripts/core/equipment_system.gd`, `scripts/combat/combat_controller.gd`, `scripts/test/playable_prototype_smoke.gd`, `scripts/test/aoe_ui_smoke.gd`, and these four docs. Older smoke setup now clicks CreateMatch; winner assertions use P1. Prior workspace changes are preserved. No JSON, scene, main or project-setting edits by this follow-up.
+- Remaining: armor equip/replace/cost/timing and specific defensive effects need a later gameplay specification; no mitigation/dodge/extra HP was added. General nested effects/AI/roles and previously recorded engine limitations remain outside scope. No commit/push or next milestone.
+
+**Actual validation:** Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled only in the temporary test project: **15/15 regression suites PASS** (13 original + AOE + defense foundation), plus **all three UI smoke tests PASS**. Inspected each suite completion and final logs: no SCRIPT ERROR, GDScript warning, load failure or leak diagnostic. The intermediate invalid-slot numeric fixture exposed a loader runtime comparison error; the loader now checks slot type before comparing strings, and the final rerun passes. Known root-certificate/global-editor-settings sandbox errors are environmental and unchanged.
+
+Defense regression checks inert metadata loading, malformed slots without partial loading, independent weapon/armor occupancy, duplicate-slot rejection, card conservation and no new armor equip action. Menu smoke verifies all counts 2–6, P1…Pn, opening cards, nonoverlapping seats, full turn order, cancellation preserving the old match/response, restart after victory, and real mouse double-clicks through every existing card confirmation context. Existing combat/rescue/AOE smoke cases remain covered after explicitly starting a default four-seat match from the menu.
+
+Rendered and inspected OpenGL 1280x720 captures of the startup menu and 2-/4-/6-seat tables, including defensive-slot labels. `git diff --check` passed. Temporary project: `C:/Users/Admin/AppData/Local/Temp/tactics-menu-7698e1a703e84433a6d7633111971aec`; captures and helper stay outside the repository. No workspace project-setting changes; all source/data hashes were compared with the tested copy.
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$menuPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-menu-7698e1a703e84433a6d7633111971aec'
+# Copy scripts/data/scenes/project.godot/icon.svg into menuPath;
+# enable debug/gdscript/warnings/treat_warnings_as_errors in that copy only.
+& $godotExecutable --headless --path $menuPath --editor --import --quit --log-file (Join-Path $menuPath 'import-final.log')
+& $godotExecutable --headless --path $menuPath --script res://scripts/test/regression_runner.gd --quit-after 1800 --log-file (Join-Path $menuPath 'regression-final.log')
+& $godotExecutable --headless --path $menuPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800 --log-file (Join-Path $menuPath 'ui-smoke-final.log')
+& $godotExecutable --headless --path $menuPath --script res://scripts/test/aoe_ui_smoke.gd --quit-after 1800 --log-file (Join-Path $menuPath 'aoe-ui-smoke-final.log')
+& $godotExecutable --headless --path $menuPath --script res://scripts/test/menu_interaction_smoke.gd --quit-after 1800 --log-file (Join-Path $menuPath 'menu-smoke-final.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+Older AOE results below describe their original snapshot.
+
+## Previous AOE snapshot
+- **AOE Tool System v0.1 implemented:** Gatling/Indian use one data-driven `aoe_response_damage` queue, manual per-target responses, Dying-first continuation and engine phase/action guards. **14/14 regression suites (13 existing + AOE) and both UI smoke tests PASS** with warnings-as-errors; implementation and reproducible commands below.
+
+## AOE Tool System v0.1 — 2026-11-06
+
+- Scope: one sequential AOE tool resolution, not the general weapon/nested-decision framework. Gatling requires `block_attack`; Indian requires `deal_attack`. Both use `target_scope=all_other_players`, positive integral JSON damage, no distance check, and counterclockwise `TurnManager.seat_order` starting after the user. Source and ELIMINATED seats are excluded. Response cards must be owned basic hand cards with the requested effect; wrong owner/type/target/stale cards reject without payment.
+- New `AoeResolution` captures source/card/name, ordered target IDs, cursor, response effect and damage. The tool is discarded once; a valid explicit response is discarded once OR damage goes through DamagePipeline. Cursor advances before Dying adoption; final-target Dying keeps the AOE lock. Rescue/elimination resumes the correct next response without reapplying damage. External Dying before response preserves that response after rescue or skips it after elimination. Source elimination retains the committed queue; existing turn skipping resumes only after it finishes. Match end clears pending AOE.
+- Normal Attack and AOE remain separate APIs/windows. Indian responses do not call use_attack, increment attacks_used, open another Attack Response or activate weapons. DamageContext now distinguishes GENERIC/ATTACK/AOE_TOOL; pipeline has an optional compatible source-kind argument and DamageModifier has an optional source-kind filter. Attack-only weapon effects must filter ATTACK; common damage defenses retain their normal pipeline behavior. Four active weapon abilities remain unimplemented.
+- TurnManager's shared guard prioritizes Dying then Attack/AOE. New attacks/tools/heal/equip/turn discard, end-turn, auto-advance and direct phase/start calls cannot bypass pending AOE. No AI or automatic response choice is introduced. A forward-only cursor, finite seat list and synchronous reentry lock bound progress without recursive resolution.
+- UI routes AOE through controller APIs and displays source/tool/current target, valid response cards, Đồng ý and Không phản ứng, including when no valid response card exists. Dying temporarily replaces the AOE modal. Pending AOE disables normal hand use/End Turn; draft choices remain outside the Event Log. The existing standalone scene/default startup are unchanged.
+- Data: added Gatling/Indian definitions to cards.json; concurrent user edits to names/descriptions and existing weapon fields were preserved. A previously observed `parameterss` typo was corrected in the live workspace before this task patched it; no separate typo rewrite was needed. **This task never wrote standard.json.** The user edited that file during work; final tests used their valid **47-card** snapshot (3 Gatling, 3 Indian, 3 Discard, 3 Steal; other quantities unchanged). An intermediate test copy captured incomplete JSON while it was being edited; that failed run was replaced by a valid snapshot and is not counted as passing evidence.
+- Created: `scripts/combat/aoe_resolution.gd`, `scripts/test/aoe_system_test.gd`, `scripts/test/aoe_ui_smoke.gd`, `scripts/test/regression_runner.gd` (and generated Godot UIDs).
+- Modified: `scripts/actions/action_executor.gd`, `scripts/actions/action_validator.gd`, `scripts/cards/card_database.gd`, `scripts/combat/combat_controller.gd`, `scripts/combat/damage_context.gd`, `scripts/combat/damage_modifier.gd`, `scripts/combat/damage_pipeline.gd`, `scripts/core/turn_manager.gd`, `scripts/dev/playable_prototype.gd`, `scripts/test/card_database_test.gd`, `data/cards.json`, and GDD/ARCHITECTURE/DEVELOPMENT_PLAN/DEVELOPMENT_STATUS. Existing APIs remain compatible through optional arguments; CardDatabaseTest's expected definition count was updated from 10 to 12 with AOE assertions. No edits to existing 13 suite bodies beyond this schema assertion migration.
+- Actual validation: Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in the temporary project only. **14/14 regression suites PASS; playable_prototype_smoke and aoe_ui_smoke PASS**. Inspected per-suite completion markers and logs, not just exit code/SUITE_RETURNED. No final SCRIPT ERROR, GDScript warning, load failure or leak diagnostics. Known root-certificate-store and global-editor-settings sandbox errors remain environmental.
+- Regression coverage: both response types, independent seat/storage order, wraparound/eliminated skipping, distance independence, wrong/replayed/spent response rejection, payment/card integrity, unchanged Attack count, snapshot isolation, normal/direct guards, first/last target Dying, negative HP with two paid rescues, external target/source elimination, match-end cleanup, common damage cancellation and Attack-only modifier exclusion, malformed JSON parameters, renamed definitions and reentry during discard notifications. UI coverage uses real mouse clicks for both tools, Human/Bot responses, no auto-consumption, draft/no-log behavior, explicit decline, Dying interruption and return to PLAY.
+- Visually verified OpenGL captures at 1280x720: aoe-gatling.png, aoe-dying.png and aoe-indian-human.png. Temporary fixtures/capture helper/screenshots stay outside the repository.
+- Remaining: general nested/simultaneous effects, AI, weapon active abilities, role-based wins, and the previously recorded negative-HP `GameState.validate_state` discrepancy remain outside v0.1. No new gameplay policy for those systems. Stop after AOE v0.1; no commit/push.
+
+Verification used this temporary copy, preserving workspace project settings:
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$aoePath = 'C:/Users/Admin/AppData/Local/Temp/tactics-aoe-d4edd01033d945d3a5c4d414f337f529'
+# scripts/data/scenes/project.godot/icon.svg copied into aoePath;
+# append [debug] gdscript/warnings/treat_warnings_as_errors=true in that copy only.
+& $godotExecutable --headless --path $aoePath --editor --import --quit --log-file (Join-Path $aoePath 'import-final.log')
+& $godotExecutable --headless --path $aoePath --script res://scripts/test/regression_runner.gd --quit-after 1800 --log-file (Join-Path $aoePath 'regression-final.log')
+& $godotExecutable --headless --path $aoePath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800 --log-file (Join-Path $aoePath 'ui-smoke-final.log')
+& $godotExecutable --headless --path $aoePath --script res://scripts/test/aoe_ui_smoke.gd --quit-after 1800 --log-file (Join-Path $aoePath 'aoe-ui-smoke-final.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The repository runner discovers all `scripts/test/*_test.gd` and prints each suite's return marker. A helper assertion may return control to it, so check suite PASS markers and absence of SCRIPT ERRORs/load failures as done for this verification; its exit code alone is not a verdict. Both UI smoke scripts are separate SceneTree invocations.
+
+## Earlier UI snapshot (before AOE v0.1)
 - Latest UI update: selected hand/modal cards rise 12 px; other cards dim while legal alternatives remain clickable. Draft selection/targeting/cancellation stays out of the match log. Human has a separate lower information panel; the adjacent hand still follows the active actor for manual Bot control. **13/13 regression suites and UI smoke PASS** under warnings-as-errors; details below.
 
 ## Selection feedback and separate Human panel — 2026-11-06

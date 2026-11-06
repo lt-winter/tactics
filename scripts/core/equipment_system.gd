@@ -14,11 +14,21 @@ func _init(state: GameState, rules: RuleEngine) -> void:
 
 
 func get_weapon(player_id: int) -> CardInstance:
+	return get_equipment(player_id, "weapon")
+
+
+func get_defense(player_id: int) -> CardInstance:
+	return get_equipment(player_id, "armor")
+
+
+func get_equipment(player_id: int, slot: String) -> CardInstance:
+	if slot not in CardDefinition.EQUIPMENT_SLOTS:
+		return null
 	var player: Player = game_state.get_player(player_id)
 	if player == null:
 		return null
 	for card: CardInstance in player.equipment:
-		if card.definition.is_equipment() and card.definition.equipment_slot == "weapon":
+		if card.definition.is_equipment() and card.definition.equipment_slot == slot:
 			return card
 	return null
 

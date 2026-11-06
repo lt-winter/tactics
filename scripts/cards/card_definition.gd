@@ -2,6 +2,8 @@
 class_name CardDefinition
 extends RefCounted
 
+const EQUIPMENT_SLOTS: Array[String] = ["weapon", "armor"]
+
 var id: String
 var display_name: String
 var category: String
@@ -35,6 +37,10 @@ func is_tool() -> bool:
 
 func is_equipment() -> bool:
 	return category == "equipment"
+
+
+func has_equipment_slot() -> bool:
+	return is_equipment() and equipment_slot in EQUIPMENT_SLOTS
 
 
 func has_effect(effect_id: String) -> bool:

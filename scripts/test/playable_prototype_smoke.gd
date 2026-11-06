@@ -12,6 +12,9 @@ func _run() -> void:
 	_ui = scene.instantiate() as PlayablePrototype
 	root.add_child(_ui)
 	await process_frame
+	assert(_ui.game_state == null)
+	_press("CreateMatch")
+	await process_frame
 	assert(_ui.game_state.players.size() == 4)
 	assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
 	for player: Player in _ui.game_state.players:
@@ -133,6 +136,8 @@ func _press(node_name: String) -> void:
 	var button: Button = _ui.find_child(node_name, true, false) as Button
 	assert(button != null, node_name)
 	button.pressed.emit()
+	if node_name == "NewTable":
+		(_ui.find_child("CreateMatch", true, false) as Button).pressed.emit()
 
 
 func _click(node_name: String) -> void:
@@ -608,8 +613,8 @@ func _test_winner_ui() -> void:
 		assert(not _ui.game_state.match_over)
 		_press("ChoiceCancel")
 	assert(_ui.game_state.match_over and _ui.game_state.winner_id == 1)
-	assert((_ui.find_child("PhaseLabel", true, false) as Label).text.contains("Human thắng cuộc"))
-	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Human thắng cuộc"))
+	assert((_ui.find_child("PhaseLabel", true, false) as Label).text.contains("P1 thắng cuộc"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 thắng cuộc"))
 	assert((_ui.find_child("EndTurn", true, false) as Button).disabled)
 	assert(_ui.find_child("HumanDraw", true, false) == null)
 	assert(not (_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)

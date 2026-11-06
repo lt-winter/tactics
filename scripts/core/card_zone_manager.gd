@@ -117,7 +117,7 @@ func transfer_cards(moves: Array[Dictionary]) -> bool:
 		for card: CardInstance in destination:
 			if card.instance_id == card_id:
 				return false
-			if to_zone == EQUIPMENT and found.definition.is_equipment() and found.definition.equipment_slot == "weapon" and card.definition.is_equipment() and card.definition.equipment_slot == "weapon":
+			if to_zone == EQUIPMENT and found.definition.has_equipment_slot() and card.definition.has_equipment_slot() and found.definition.equipment_slot == card.definition.equipment_slot:
 				return false
 		source.erase(found)
 		destination.append(found)

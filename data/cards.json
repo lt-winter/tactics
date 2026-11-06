@@ -177,6 +177,40 @@
 		  }
 		}
 	  ]
+	},
+	{
+	  "id": "gatling",
+	  "name": "Xả đạn",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Giai đoạn hành động, sử dụng với tất cả người chơi khác. Lần lượt mỗi người lựa chọn: 1. Dùng Né tránh.\n 2. Nhận 1 sát thương.",
+	  "effects": [
+		{
+		  "effect_id": "aoe_response_damage",
+		  "parameters": {
+			"target_scope": "all_other_players",
+			"response_effect": "block_attack",
+			"damage": 1
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "indian",
+	  "name": "Thổ dân",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Giai đoạn hành động, sử dụng với tất cả người chơi khác. Lần lượt mỗi người lựa chọn: 1. Dùng Tấn công.\n 2. Nhận 1 sát thương.",
+	  "effects": [
+		{
+		  "effect_id": "aoe_response_damage",
+		  "parameters": {
+			"target_scope": "all_other_players",
+			"response_effect": "deal_attack",
+			"damage": 1
+		  }
+		}
+	  ]
 	}
   ]
 }

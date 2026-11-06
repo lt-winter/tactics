@@ -68,6 +68,8 @@ func get_transition_block_reason() -> String:
 		if action_executor != null:
 			if action_executor.has_pending_attack():
 				return "Phải giải quyết phản ứng Tấn công trước."
+			if action_executor.has_pending_aoe():
+				return "Phải giải quyết phản ứng AOE trước."
 	return ""
 
 

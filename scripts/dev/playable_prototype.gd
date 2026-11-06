@@ -38,6 +38,11 @@ var _choice_selected_card_id: int = 0
 var _choice_zone: String = ""
 var _choice_card_count: int = 0
 var _dying_rescuer_id: int = 0
+var _setup_menu: MatchSetupMenu
+var _game_page: Control
+var _bot_layout: Control
+var _human_info: VBoxContainer
+var _player_count: int = 4
 
 
 func _ready() -> void:
@@ -47,7 +52,11 @@ func _ready() -> void:
 	get_window().content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	_build_ui()
 	_build_choice_overlay()
-	_new_table()
+	_setup_menu = MatchSetupMenu.new()
+	_setup_menu.start_requested.connect(_new_table)
+	_setup_menu.cancel_requested.connect(_cancel_setup)
+	add_child(_setup_menu)
+	_show_setup()
 
 
 func _style(background: Color, border: Color) -> StyleBoxFlat:
@@ -96,6 +105,7 @@ func _build_ui() -> void:
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 	var margin: MarginContainer = MarginContainer.new()
+	_game_page = margin
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
@@ -116,7 +126,7 @@ func _build_ui() -> void:
 	_direction = _label(identity, "", 13)
 	_direction.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_build_event_log(header)
-	var new_table: Button = _button(header, "Bàn mới", _new_table)
+	var new_table: Button = _button(header, "Bàn mới", _show_setup)
 	new_table.name = "NewTable"
 	new_table.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var table: PanelContainer = PanelContainer.new()
@@ -125,17 +135,15 @@ func _build_ui() -> void:
 	table.add_theme_stylebox_override("panel", _style(Color("20372e"), Color("8b7049")))
 	page.add_child(table)
 	var layout: Control = Control.new()
-	layout.custom_minimum_size.y = 220.0
+	_bot_layout = layout
+	layout.custom_minimum_size.y = 250.0
 	table.add_child(layout)
-	_seats.resize(4)
-	for player_id: int in range(2, 5):
-		_create_seat(layout, player_id)
 	var center: VBoxContainer = VBoxContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.offset_left = 240.0
 	center.offset_right = -240.0
-	center.offset_top = 75.0
-	center.offset_bottom = -75.0
+	center.offset_top = 110.0
+	center.offset_bottom = -110.0
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	layout.add_child(center)
 	_prompt = _label(center, "")
@@ -148,9 +156,9 @@ func _build_ui() -> void:
 	human_panel.name = "HumanInfoPanel"
 	personal_row.add_child(human_panel)
 	var human_info: VBoxContainer = VBoxContainer.new()
+	_human_info = human_info
 	human_panel.add_child(human_info)
 	_label(human_info, "NGƯỜI CHƠI CỦA BẠN", 13).add_theme_color_override("font_color", GOLD)
-	_create_seat(human_info, HUMAN_ID)
 	var hand_column: VBoxContainer = VBoxContainer.new()
 	hand_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	personal_row.add_child(hand_column)
@@ -187,28 +195,28 @@ func _create_seat(parent: Node, player_id: int) -> void:
 	seat.add_theme_font_size_override("font_size", 14)
 	seat.toggle_mode = true
 	if player_id == HUMAN_ID:
-		seat.custom_minimum_size = Vector2(216.0, 100.0)
+		seat.custom_minimum_size = Vector2(216.0, 112.0)
 		_seats[player_id - 1] = seat
 		return
-	var position: Vector2 = Vector2(0.5, 1.0)
-	if player_id == 2:
+	var position: Vector2 = Vector2(0.5, 0.0)
+	if _player_count >= 5:
+		var positions: Array[Vector2] = [Vector2(1, 1), Vector2(1, 0)]
+		if _player_count == 6:
+			positions.append(Vector2(0.5, 0))
+		positions.append_array([Vector2(0, 0), Vector2(0, 1)])
+		position = positions[player_id - 2]
+	elif _player_count >= 3 and player_id == 2:
 		position = Vector2(1.0, 0.5)
-	elif player_id == 3:
-		position = Vector2(0.5, 0.0)
-	elif player_id == 4:
+	elif player_id == _player_count and _player_count >= 3:
 		position = Vector2(0.0, 0.5)
 	seat.anchor_left = position.x
 	seat.anchor_right = position.x
 	seat.anchor_top = position.y
 	seat.anchor_bottom = position.y
-	seat.offset_left = -108.0 if position.x > 0.0 else 0.0
-	seat.offset_right = 108.0 if position.x < 1.0 else 0.0
-	if player_id == 2:
-		seat.offset_left = -216.0
-	elif player_id == 4:
-		seat.offset_right = 216.0
-	seat.offset_top = -100.0 if player_id == 1 else (-50.0 if position.y == 0.5 else 0.0)
-	seat.offset_bottom = 0.0 if player_id == 1 else (50.0 if position.y == 0.5 else 100.0)
+	seat.offset_left = -216.0 * position.x
+	seat.offset_right = 216.0 * (1.0 - position.x)
+	seat.offset_top = -112.0 * position.y
+	seat.offset_bottom = 112.0 * (1.0 - position.y)
 	_seats[player_id - 1] = seat
 
 
@@ -230,30 +238,64 @@ func _build_event_log(parent: Node) -> void:
 	_event_log.add_theme_font_size_override("normal_font_size", 14)
 	row.add_child(_event_log)
 
-func _new_table() -> void:
-	_choice_overlay.hide()
-	_choice_kind = ""
+func _show_setup() -> void:
+	_setup_menu.open(_player_count, game_state != null)
+	_game_page.hide()
+
+
+func _cancel_setup() -> void:
+	if game_state == null:
+		return
+	_setup_menu.hide()
+	_game_page.show()
+	_refresh()
+
+
+func _rebuild_seats(count: int) -> void:
+	for seat: Button in _seats:
+		seat.get_parent().remove_child(seat)
+		seat.queue_free()
+	_seats.clear()
+	_seats.resize(count)
+	_player_count = count
+	_create_seat(_human_info, HUMAN_ID)
+	for player_id: int in range(2, count + 1):
+		_create_seat(_bot_layout, player_id)
+
+
+func _new_table(player_count: int = 4) -> void:
+	if player_count < 2 or player_count > 6:
+		_setup_menu.show_error("Số người chơi phải từ 2 đến 6.")
+		return
 	var database: CardDatabase = CardDatabase.new()
 	if not database.load_from_file("res://data/cards.json"):
-		_notify("Không nạp được bài: " + "; ".join(database.get_errors()))
+		_setup_menu.show_error("Không nạp được bài: " + "; ".join(database.get_errors()))
 		return
 	var decks: DeckDatabase = DeckDatabase.new(database)
 	if not decks.load_from_file("res://data/decks/standard.json"):
-		_notify("Không nạp được bộ bài: " + "; ".join(decks.get_errors()))
+		_setup_menu.show_error("Không nạp được bộ bài: " + "; ".join(decks.get_errors()))
 		return
 	var rules: RuleEngine = RuleEngine.new()
 	if not rules.load_base_rules("res://data/rules/base_rules.json"):
-		_notify("Không nạp được luật. Bàn chơi chưa sẵn sàng.")
+		_setup_menu.show_error("Không nạp được luật. Bàn chơi chưa sẵn sàng.")
 		return
-	var players: Array[Player] = [
-		Player.new(1, "Human", 4), Player.new(2, "Bot 1", 4),
-		Player.new(3, "Bot 2", 4), Player.new(4, "Bot 3", 4)
-	]
+	if decks.get_card_count() < player_count * 4:
+		_setup_menu.show_error("Bộ bài không đủ để chia 4 lá cho mỗi người.")
+		return
+	var players: Array[Player] = []
+	_choice_overlay.hide()
+	_choice_kind = ""
+	var order: Array[int] = []
+	for player_id: int in range(1, player_count + 1):
+		players.append(Player.new(player_id, "P%d" % player_id, 4))
+		order.append(player_id)
 	game_state = GameState.new(decks.create_instances(), players)
 	game_state.zone_manager.cards_discarded.connect(_on_cards_discarded)
 	game_state.match_finished.connect(_on_match_finished)
-	var order: Array[int] = [1, 2, 3, 4]
 	combat = CombatController.new(game_state, TurnManager.new(game_state, order), rules)
+	_rebuild_seats(player_count)
+	_setup_menu.hide()
+	_game_page.show()
 	selected_target_id = 0
 	selected_human_card_id = 0
 	selected_bot_card_id = 0
@@ -267,7 +309,7 @@ func _new_table() -> void:
 		combat.turn_manager.set_phase_wait(TurnManager.Phase.START, started.reason)
 	_record("Bàn mới: %d lá; chia 4 lá/người" % decks.get_card_count(), started)
 	if started.valid:
-		_notify("Đã chia 4 lá/người. Human rút thêm 2 lá ngay lượt đầu, có 6 lá để sử dụng.")
+		_notify("Đã chia 4 lá/người. P1 rút thêm 2 lá trong giai đoạn rút bài, có 6 lá để sử dụng.")
 
 
 func _on_cards_discarded(card_names: PackedStringArray) -> void:
@@ -320,6 +362,8 @@ func _refresh() -> void:
 		var attack_range: Dictionary = combat.get_attack_range(player.player_id)
 		var range_text: String = "?" if attack_range.is_empty() else ("∞" if attack_range["unlimited"] else str(attack_range["value"]))
 		seat.text += "\n%s · Tầm %s" % ["Vũ khí: —" if weapon == null else weapon.definition.display_name, range_text]
+		var defense: CardInstance = combat.get_defense(player.player_id)
+		seat.text += "\nPhòng ngự: " + ("—" if defense == null else defense.definition.display_name)
 		seat.tooltip_text = "Máu %d/%d" % [player.hp, player.max_hp] + ("" if weapon == null else "\n" + weapon.definition.description)
 		seat.disabled = not _is_target_available(player.player_id)
 		seat.modulate = Color("777777") if seat.disabled else Color.WHITE
@@ -334,6 +378,9 @@ func _refresh() -> void:
 	elif combat.has_pending_response():
 		var pending: Dictionary = combat.executor.pending_attack
 		_prompt.text = "%s → %s\nĐang chờ Né / Không Né" % [_name(int(pending["actor_id"])), _name(int(pending["target_id"]))]
+	elif combat.has_pending_aoe():
+		var aoe: Dictionary = combat.get_pending_aoe()
+		_prompt.text = "%s dùng %s → chờ %s phản ứng" % [_name(int(aoe["actor_id"])), aoe["card_name"], _name(int(aoe["target_id"]))]
 	var unblocked: bool = combat.turn_manager.get_transition_block_reason().is_empty()
 	(find_child("EndTurn", true, false) as Button).disabled = not (unblocked and current != null and combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
 	var discarding: bool = unblocked and combat.turn_manager.current_phase == TurnManager.Phase.DISCARD and combat.turn_manager.get_required_discards() > 0
@@ -347,7 +394,7 @@ func _refresh() -> void:
 		_choice_kind = ""
 		_choice_overlay.hide()
 		for node: Node in find_children("*", "Button", true, false):
-			if node.name != "NewTable":
+			if node.name != "NewTable" and not _setup_menu.is_ancestor_of(node):
 				(node as Button).disabled = true
 		return
 	if combat.has_pending_dying():
@@ -358,7 +405,11 @@ func _refresh() -> void:
 		var target_id: int = int(combat.executor.pending_attack["target_id"])
 		if _choice_kind != "response" or _choice_target_id != target_id:
 			_open_response_choice(target_id)
-	elif _choice_kind in ["response", "dying"]:
+	elif combat.has_pending_aoe():
+		var aoe: Dictionary = combat.get_pending_aoe()
+		if _choice_kind != "aoe" or _choice_target_id != int(aoe["target_id"]) or _choice_played_card_id != int(aoe["card_id"]):
+			_open_aoe_choice(aoe)
+	elif _choice_kind in ["response", "dying", "aoe"]:
 		_choice_kind = ""
 		_choice_overlay.hide()
 
@@ -384,8 +435,11 @@ func _refresh_hand() -> void:
 	for card: CardInstance in player.hand:
 		var slot: Control = _create_card_slot(_hand)
 		var card_button: Button = _create_card_face(slot, card, _select_hand_card.bind(card.instance_id))
+		card_button.gui_input.connect(_on_card_double_click.bind(card_button, card.instance_id, false))
 		card_button.name = "Card%d" % card.instance_id
 		card_button.disabled = not _can_select_card(player_id, card)
+		if card.definition.equipment_slot == "armor":
+			card_button.tooltip_text += "\nSlot phòng ngự đã sẵn sàng; chưa triển khai sử dụng/hiệu ứng."
 		_set_card_selection(card_button, card.instance_id == selected_hand_card_id, selected_hand_card_id != 0)
 
 
@@ -400,6 +454,8 @@ func _can_select_card(player_id: int, card: CardInstance) -> bool:
 	var validator: ActionValidator = combat.executor.validator
 	if combat.turn_manager.current_phase == TurnManager.Phase.DISCARD:
 		return validator.validate_turn_discard(player_id, card.instance_id).valid
+	if card.definition.has_effect("aoe_response_damage"):
+		return validator.validate_aoe_use(player_id, card.instance_id).valid
 	if card.definition.has_effect("restore_hp"):
 		return validator.validate_heal(player_id, card.instance_id).valid
 	if card.definition.is_equipment():
@@ -439,6 +495,23 @@ func _create_card_slot(parent: Node) -> Control:
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(slot)
 	return slot
+
+
+func _on_card_double_click(event: InputEvent, button: Button, card_id: int, modal: bool) -> void:
+	if not event is InputEventMouseButton or button.disabled or _setup_menu.visible:
+		return
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if mouse.button_index != MOUSE_BUTTON_LEFT or not mouse.pressed or not mouse.double_click:
+		return
+	button.accept_event()
+	# Suppress the old button's release; confirmation can replace the whole view.
+	button.disabled = true
+	if modal:
+		_select_choice_card(card_id, str(button.get_meta("choice_zone")), 0)
+		_confirm_choice()
+	else:
+		_select_hand_card(card_id)
+		_confirm_hand_action()
 
 
 func _set_card_selection(button: Button, selected: bool, has_selection: bool) -> void:
@@ -569,6 +642,9 @@ func _attack(actor_id: int) -> void:
 	var card: CardInstance = _find_card(actor_id, card_id)
 	if card == null:
 		_feedback.text = "Chọn một lá bài trước."
+		return
+	if card.definition.has_effect("aoe_response_damage"):
+		_record("%s dùng %s" % [_name(actor_id), card.definition.display_name], combat.use_aoe(actor_id, card_id))
 		return
 	if card.definition.is_equipment():
 		var equipped: ActionResult = combat.equip_weapon(actor_id, card_id)
@@ -701,9 +777,12 @@ func _add_choice_card(card_id: int, zone: String, caption: String, hidden: bool,
 			return
 		button = _create_card_face(slot, card, handler)
 	button.name = "HiddenCard%d" % index if hidden else ("EquipmentCard%d" % card_id if _choice_kind == "tool" else ("RescueCard%d" % card_id if _choice_kind == "dying" else "DodgeCard%d" % card_id))
+	if _choice_kind == "aoe":
+		button.name = "AoeResponseCard%d" % card_id
 	button.toggle_mode = true
 	button.set_meta("choice_card_id", card_id)
 	button.set_meta("choice_zone", zone)
+	button.gui_input.connect(_on_card_double_click.bind(button, card_id, true))
 	_set_card_selection(button, false, false)
 
 
@@ -750,6 +829,18 @@ func _select_dying_rescuer(index: int) -> void:
 	_open_dying_choice(_choice_target_id, rescuers.get_item_id(index))
 
 
+func _open_aoe_choice(pending: Dictionary) -> void:
+	var target_id: int = int(pending["target_id"])
+	_prepare_choice("aoe", int(pending["actor_id"]), target_id, int(pending["card_id"]))
+	var response_name: String = "Né tránh" if pending["response_effect"] == "block_attack" else "Tấn công"
+	_choice_title.text = "%s dùng %s → %s\nChọn %s rồi nhấn Đồng ý, hoặc Không phản ứng." % [_name(_choice_actor_id), pending["card_name"], _name(target_id), response_name]
+	_choice_cancel.text = "Không phản ứng"
+	for card: CardInstance in combat.get_aoe_response_cards(target_id):
+		_add_choice_card(card.instance_id, "hand", card.get_display_name(), false)
+	if _choice_card_count == 0:
+		_label(_choice_cards, "Không có lá phản ứng hợp lệ.\nChọn Không phản ứng để nhận sát thương.")
+
+
 func _open_response_choice(target_id: int) -> void:
 	_prepare_choice("response", target_id, target_id, 0)
 	_choice_title.text = "%s bị Tấn công: chọn lá Né rồi nhấn Đồng ý.\nBot được điều khiển thủ công." % _name(target_id)
@@ -793,6 +884,15 @@ func _open_tool_choice(actor_id: int, target_id: int, card_id: int) -> void:
 
 
 func _confirm_choice() -> void:
+	if _choice_kind == "aoe":
+		if _choice_selected_card_id == 0:
+			return
+		var responder_id: int = _choice_target_id
+		var response_id: int = _choice_selected_card_id
+		_choice_kind = ""
+		_choice_overlay.hide()
+		_record("%s đồng ý phản ứng AOE" % _name(responder_id), combat.respond_to_aoe(responder_id, response_id))
+		return
 	if _choice_kind == "dying":
 		if _choice_selected_card_id == 0:
 			return
@@ -817,6 +917,12 @@ func _confirm_choice() -> void:
 
 
 func _cancel_choice() -> void:
+	if _choice_kind == "aoe":
+		var responder_id: int = _choice_target_id
+		_choice_kind = ""
+		_choice_overlay.hide()
+		_record("%s chọn Không phản ứng" % _name(responder_id), combat.respond_to_aoe(responder_id))
+		return
 	if _choice_kind == "dying":
 		_choice_kind = ""
 		_choice_overlay.hide()

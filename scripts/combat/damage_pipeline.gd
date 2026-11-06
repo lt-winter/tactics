@@ -34,7 +34,8 @@ func unregister_modifier(modifier_id: String) -> bool:
 func process_damage(
 	source_id: int,
 	target_id: int,
-	amount: int
+	amount: int,
+	source_kind: DamageContext.SourceKind = DamageContext.SourceKind.GENERIC
 ) -> bool:
 	if resolver.game_state.match_over or amount <= 0:
 		return false
@@ -51,7 +52,8 @@ func process_damage(
 	var context: DamageContext = DamageContext.new(
 		source_id,
 		target_id,
-		amount
+		amount,
+		source_kind
 	)
 
 	var applicable: Array[DamageModifier] = (

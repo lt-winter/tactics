@@ -20,7 +20,9 @@ static func run_all() -> void:
 
 	print("=== CARD DATABASE TEST ===")
 
-	assert(database.get_card_count() == 10)
+	assert(database.get_card_count() == 12)
+	assert(database.get_definition("gatling").has_effect("aoe_response_damage"))
+	assert(database.get_definition("indian").has_effect("aoe_response_damage"))
 	assert(database.has_card("attack"))
 	assert(database.has_card("dodge"))
 	assert(database.has_card("heal"))

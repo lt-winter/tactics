@@ -115,6 +115,11 @@ func _validate_card(card: Variant, location: String) -> bool:
 	if not card.has("effects") or not (card["effects"] is Array):
 		errors.append(location + " thiếu mảng effects.")
 		return false
+	if card["category"] == "equipment" and card.has("equipment_slot"):
+		var slot: Variant = card["equipment_slot"]
+		if not slot is String or slot not in CardDefinition.EQUIPMENT_SLOTS:
+			errors.append(location + " có equipment_slot chưa được hỗ trợ.")
+			return false
 	if card["category"] == "equipment" and card["subcategory"] == "weapon":
 		var weapon_range: Variant = card.get("range")
 		if card.get("equipment_slot") != "weapon" or not (weapon_range is int or weapon_range is float):
@@ -124,8 +129,15 @@ func _validate_card(card: Variant, location: String) -> bool:
 		if not is_finite(range_number) or range_number < 1 or range_number != floor(range_number) or range_number > 2147483647:
 			errors.append(location + " có range vũ khí không hợp lệ.")
 			return false
+	if card["category"] == "equipment" and card["subcategory"] == "armor" and card.get("equipment_slot") != "armor":
+		errors.append(location + " cần equipment_slot=armor.")
+		return false
+	if card["category"] == "equipment" and card.has("equipment_slot"):
+		if card["equipment_slot"] == "armor" and card["subcategory"] != "armor":
+			errors.append(location + " cần subcategory=armor cho slot phòng ngự.")
+			return false
 
-	if card["effects"].is_empty():
+	if card["effects"].is_empty() and not (card["category"] == "equipment" and card.get("equipment_slot") == "armor"):
 		errors.append(location + " phải có ít nhất một effect.")
 		valid = false
 
@@ -159,6 +171,11 @@ func _validate_card(card: Variant, location: String) -> bool:
 			errors.append(effect_path + ".parameters phải là Object.")
 			valid = false
 			continue
+
+		if effect.get("effect_id") == "aoe_response_damage":
+			if card["category"] != "tool" or card["effects"].size() != 1 or not AoeResolution.valid_parameters(params):
+				errors.append(effect_path + " có cấu hình AOE không được hỗ trợ.")
+				valid = false
 
 		if params.has("target_zones"):
 			var zones: Variant = params["target_zones"]

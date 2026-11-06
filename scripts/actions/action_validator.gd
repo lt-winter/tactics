@@ -7,6 +7,38 @@ var turn_manager: TurnManager
 var rule_engine: RuleEngine
 
 
+func get_aoe_parameters(actor_id: int, card_id: int) -> Dictionary:
+	var actor: Player = game_state.get_player(actor_id)
+	if actor == null:
+		return {}
+	for card: CardInstance in actor.hand:
+		if card.instance_id != card_id:
+			continue
+		if not card.definition.is_tool() or card.definition.effects.size() != 1:
+			return {}
+		var effect: Dictionary = card.definition.effects[0]
+		if effect.get("effect_id") != "aoe_response_damage":
+			return {}
+		var parameters: Variant = effect.get("parameters")
+		if AoeResolution.valid_parameters(parameters):
+			return (parameters as Dictionary).duplicate(true)
+	return {}
+
+
+func validate_aoe_use(actor_id: int, card_id: int) -> ActionResult:
+	var blocked: String = turn_manager.get_transition_block_reason()
+	if blocked.is_empty():
+		blocked = turn_manager.get_effect_wait_reason()
+	if not blocked.is_empty():
+		return ActionResult.failure(blocked)
+	var current: Player = turn_manager.get_current_player()
+	if current == null or current.player_id != actor_id or not current.is_alive() or turn_manager.current_phase != TurnManager.Phase.PLAY:
+		return ActionResult.failure("Chỉ dùng AOE trong giai đoạn sử dụng bài của mình.")
+	if get_aoe_parameters(actor_id, card_id).is_empty():
+		return ActionResult.failure("Không sở hữu lá AOE được hỗ trợ hoặc sai tham số.")
+	return ActionResult.success()
+
+
 func _init(
 	state: GameState,
 	turns: TurnManager,

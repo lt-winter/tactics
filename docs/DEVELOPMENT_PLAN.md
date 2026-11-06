@@ -71,6 +71,9 @@ Mỗi mốc phải giữ 13 regression suites, thêm test nền tảng/vũ khí 
 Các quyết định còn thiếu được đánh số G1–G12 trong thiết kế: equip/cleanup; Dao thiếu bài/người chọn/timing; Ná eligibility và trạng thái sau Dying; thứ tự Súng lục; hiệu lực snapshot/live; người chọn equipment; trigger ties và commit cost. Danh sách này không thay đổi các luật đã chốt trong GDD.
 
 ## Stage 2 — Full approved MVP card deck
+- **AOE Tool System v0.1 completed (2026-11-06):** data-driven Gatling/Indian tools, counterclockwise all-other-player queue without distance, manual typed card responses, one payment, no Attack count/weapon activation, distinct damage source and Dying-first continuation. Pending AOE blocks normal actions/phase transitions; UI has source/target, valid cards, Đồng ý/Không phản ứng. See ARCHITECTURE for schema/API and STATUS for executed tests.
+- Added AoeSystemTest and AOE UI smoke; all-suite runner now discovers 14 suites (13 existing plus AOE). Keep both UI smoke scripts. `standard.json` composition/order remains designer-controlled; live user edits were preserved.
+- Stop after AOE v0.1. General nested effects/weapon decisions, AI responses, role rules and simultaneous-AOE effects remain outside this milestone; this queue does not complete weapon F1/F2 or Stage 0.3.
 - Finalize 48-card distribution with designer approval.
 - Implement remaining tool/equipment effects and weapon range.
 - Ensure action validation, card movement and effect resolution are consistent.
@@ -89,6 +92,7 @@ Các quyết định còn thiếu được đánh số G1–G12 trong thiết k�
 - Automated bot-vs-bot simulation and deadlock detection.
 
 ## Stage 5 — Playable PC interface
+- Setup/input/defense follow-up implemented: initial/new-match menu for 2–6 named P1…Pn, adaptive seats, cancel preserving the old session, double-click through existing confirms, and defensive-slot metadata/query/UI foundation only. Added defense regression and menu/input smoke. Armor effects, armor use/replacement rules, bots and expanded role allocation remain unimplemented; no deck changes are authorized by this work.
 - Selection/personal-panel follow-up completed: selected hand/modal cards rise and other cards dim; draft selection/cancellation is absent from the match log. Human information is separate from the Bot table, while manual Bot hands still follow the current turn. No gameplay change; execution evidence is in STATUS.
 - Target-selection follow-up completed: smaller uppercase card faces, labeled tool-card zones and validator-driven target dimming/locking with stale-selection clearing. No new weapon ability or targeting rule was introduced.
 - Compact-log follow-up completed: single-spaced name-only card logs, rank/suit only at the top of each card, and an independent draw/discard/shuffle information panel. Shuffle count instruments existing shuffle calls, including match setup; gameplay unchanged.

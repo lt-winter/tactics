@@ -14,6 +14,7 @@ var pending_attack: Dictionary = {}
 
 var dying_manager: DyingManager
 var equipment_system: EquipmentSystem
+var aoe_resolution: AoeResolution
 
 func _init(
 	state: GameState,
@@ -27,6 +28,7 @@ func _init(
 	damage_pipeline = DamagePipeline.new(resolver)
 	dying_manager = DyingManager.new(state)
 	equipment_system = EquipmentSystem.new(state, rules)
+	aoe_resolution = AoeResolution.new(state, turns, damage_pipeline, dying_manager)
 	turn_manager.bind_combat(self, rules)
 	turn_manager.turn_started.connect(_on_turn_started)
 	game_state.match_finished.connect(_on_match_finished)
@@ -34,6 +36,26 @@ func _init(
 
 func _on_match_finished(_winner_id: int) -> void:
 	pending_attack.clear()
+	aoe_resolution.clear()
+
+
+func use_aoe(actor_id: int, card_id: int) -> ActionResult:
+	var validation: ActionResult = validator.validate_aoe_use(actor_id, card_id)
+	if not validation.valid:
+		return validation
+	for card: CardInstance in game_state.get_player(actor_id).hand:
+		if card.instance_id == card_id:
+			return aoe_resolution.begin(actor_id, card, validator.get_aoe_parameters(actor_id, card_id))
+	return ActionResult.failure("Không sở hữu lá AOE.")
+
+
+func respond_to_aoe(target_id: int, response_card_id: int = 0) -> ActionResult:
+	return aoe_resolution.respond(target_id, response_card_id)
+
+
+func has_pending_aoe() -> bool:
+	aoe_resolution.resume()
+	return aoe_resolution.has_pending()
 
 
 func _on_turn_started(_player_id: int, _number: int) -> void:
@@ -113,7 +135,7 @@ func discard_for_turn(player_id: int, card_id: int) -> ActionResult:
 	return ActionResult.success()
 
 func reset_turn_counters() -> void:
-	if not pending_attack.is_empty():
+	if not pending_attack.is_empty() or has_pending_aoe():
 		push_error("Không thể reset khi đang chờ phản ứng.")
 		return
 
@@ -258,7 +280,8 @@ func respond_to_attack(
 	if not damage_pipeline.process_damage(
 		source_id,
 		target_id,
-		damage
+		damage,
+		DamageContext.SourceKind.ATTACK
 	):
 		return ActionResult.failure("Không thể xử lý sát thương.")
 

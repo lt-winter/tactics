@@ -43,6 +43,10 @@ func get_weapon(player_id: int) -> CardInstance:
 	return executor.equipment_system.get_weapon(player_id)
 
 
+func get_defense(player_id: int) -> CardInstance:
+	return executor.equipment_system.get_defense(player_id)
+
+
 func get_attack_range(player_id: int) -> Dictionary:
 	var context: RuleContext = RuleContext.new(player_id)
 	return executor.validator.rule_engine.get_rule("attack_range", {}, context)
@@ -50,6 +54,28 @@ func get_attack_range(player_id: int) -> Dictionary:
 
 func use_heal(actor_id: int, card_id: int) -> ActionResult:
 	return executor.use_heal(actor_id, card_id)
+
+
+func use_aoe(actor_id: int, card_id: int) -> ActionResult:
+	return executor.use_aoe(actor_id, card_id)
+
+
+func respond_to_aoe(target_id: int, response_card_id: int = 0) -> ActionResult:
+	return _resume_after(executor.respond_to_aoe(target_id, response_card_id))
+
+
+func has_pending_aoe() -> bool:
+	return executor.has_pending_aoe()
+
+
+func get_pending_aoe() -> Dictionary:
+	executor.aoe_resolution.resume()
+	return executor.aoe_resolution.get_pending()
+
+
+func get_aoe_response_cards(target_id: int) -> Array[CardInstance]:
+	executor.aoe_resolution.resume()
+	return executor.aoe_resolution.get_response_cards(target_id)
 
 
 func use_tool(actor_id: int, target_id: int, card_id: int, target_card_id: int, zone: String) -> ActionResult:

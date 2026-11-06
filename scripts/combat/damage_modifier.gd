@@ -14,6 +14,7 @@ var owner_id: int
 var priority: int
 var role: Role
 var callback: Callable
+var source_kinds: Array[DamageContext.SourceKind] = []
 
 
 func _init(
@@ -22,7 +23,8 @@ func _init(
 	new_owner_id: int,
 	new_priority: int,
 	new_role: Role,
-	new_callback: Callable
+	new_callback: Callable,
+	new_source_kinds: Array[DamageContext.SourceKind] = []
 ) -> void:
 	assert(not new_modifier_id.is_empty())
 	assert(not new_source_id.is_empty())
@@ -40,9 +42,12 @@ func _init(
 	priority = new_priority
 	role = new_role
 	callback = new_callback
+	source_kinds.assign(new_source_kinds)
 
 
 func applies_to(context: DamageContext) -> bool:
+	if not source_kinds.is_empty() and context.source_kind not in source_kinds:
+		return false
 	if owner_id == 0:
 		return true
 

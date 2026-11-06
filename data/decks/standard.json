@@ -51,12 +51,14 @@
 	  "card_id": "discard",
 	  "copies": [
 		{ "suit": 0, "rank": 3 },
+		{ "suit": 0, "rank": 4 },
 		{ "suit": 1, "rank": 12 }
 	  ]
 	},
 	{
 	  "card_id": "steal",
 	  "copies": [
+		{ "suit": 0, "rank": 3 },
 		{ "suit": 0, "rank": 4 },
 		{ "suit": 2, "rank": 3 }
 	  ]
@@ -80,6 +82,22 @@
 	{
 	  "card_id": "rifle",
 	  "copies": [{ "suit": 1, "rank": 5 }]
+	},
+	{
+	  "card_id": "gatling",
+	  "copies": [
+		{ "suit": 1, "rank": 1 },
+		{ "suit": 1, "rank": 11 },
+		{ "suit": 2, "rank": 4 }
+	  ]
+	},
+	{
+	  "card_id": "indian",
+	  "copies": [
+		{ "suit": 0, "rank": 13 },
+		{ "suit": 3, "rank": 3 },
+		{ "suit": 3, "rank": 7 }
+	  ]
 	}
   ]
 }
