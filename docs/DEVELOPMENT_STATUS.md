@@ -4,6 +4,22 @@
 **Evidence standard:** implemented behavior, executed tests, and future work are recorded separately. A zero Godot process exit code alone does not establish a test pass.
 
 ## Current snapshot
+- Latest UI update: selected hand/modal cards rise 12 px; other cards dim while legal alternatives remain clickable. Draft selection/targeting/cancellation stays out of the match log. Human has a separate lower information panel; the adjacent hand still follows the active actor for manual Bot control. **13/13 regression suites and UI smoke PASS** under warnings-as-errors; details below.
+
+## Selection feedback and separate Human panel — 2026-11-06
+
+- Files changed in this follow-up: `scripts/dev/playable_prototype.gd`, `scripts/test/playable_prototype_smoke.gd`, and GDD/ARCHITECTURE/DEVELOPMENT_PLAN/DEVELOPMENT_STATUS. Existing workspace edits were preserved. No engine, JSON, scene, startup or project-setting changes in this follow-up.
+- Shared hand/modal selection presentation uses a 132 px slot for a 120 px card, lifting the selected card by 12 px and dimming alternatives. Switching/cancelling restores the appropriate appearance without payment. Disabled cards retain their validation guard.
+- Draft card/target choices and tool-picker cancellation only update local feedback; opening/selecting/cancelling a tool picker adds no log entry. Confirmed actions, discard transfers, response/rescue resolution and match results retain their logs.
+- Human Seat1 is in HumanInfoPanel below BotTable; Bot1/right, Bot2/above and Bot3/left remain unchanged. Human information stays fixed while the hand follows the active Human/Bot for manual testing. Engine turn order is unchanged.
+- Actual validation: Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled only in a fresh temporary copy: **13/13 regression suites PASS, UI smoke PASS**. Inspected all completion markers and logs: no SCRIPT ERROR, GDScript warning or load failure. Smoke covers lift/dimming/switch/cancel, draft log/resource preservation, confirmed-action logging, modal selection, panel separation and existing combat/turn/equipment/rescue/winner scenarios.
+- OpenGL 1280x720 captures visually verified the raised card, dimmed alternatives, separate Human panel and grouped tool picker. Known root-certificate/editor-settings sandbox diagnostics persist independently of script results. No commit/push or next milestone.
+- Evidence project: `C:/Users/Admin/AppData/Local/Temp/tactics-selection-ui-f84a2575a2c64d38975c91d51356fd89`. Same temporary copy/runner setup as earlier records. Commands: `--headless --path <project> --editor --import --quit`; `--headless --path <project> --script res://regression_runner.gd --quit-after 1800`; `--headless --path <project> --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800`; OpenGL capture: `--path <project> --rendering-method gl_compatibility --script res://capture.gd --quit-after 600`. Logs: import.log/regression.log/ui-smoke.log/capture.log. Helpers and captures remain outside the repository.
+
+## Earlier snapshot (before this selection update)
+- Latest UI refinement: 88x120 cards with uppercase face names, separate labeled hand/equipment/judgment groups in Hủy/Cướp, and validator-driven dimming/disabling of illegal targets for selected Attack/tools. Changing cards clears stale targets; Confirm waits for a valid target. Engine rules/data are unchanged.
+- Latest compact presentation: log entries have a single newline and name-only card references; descriptions stay in tooltips. Card rank/suit appears only at the top. Draw/discard counts and total shuffle calls are in a separate panel beside the action buttons, including the opening shuffle.
+- Latest UI redesign: no right Debug menu; Event Log is in the top header, table uses full width, card faces are portrait cards, HP uses hearts (negative deficit retained), unavailable cards and eliminated seats are disabled/dimmed. Bots remain manually controllable through the active hand. No engine/data/default-scene change in this UI follow-up.
 - Latest authorized basic equipment work is implemented: equip during own PLAY without extra cost, one weapon slot, old weapon to discard on replacement, ranges and Nỏ thần unlimited Attack via RuleModifier. Full weapon-trigger framework/four active abilities remain planned; see [WEAPON_SYSTEM_DESIGN.md](WEAPON_SYSTEM_DESIGN.md) and the latest execution record below.
 - Discard transfers log card names; Hủy/Cướp shows equipment face-up while hand cards remain hidden. Exactly one living survivor after Dying resolution now ends the match, announces the winner and locks gameplay until New Table.
 - Latest paid-rescue rule: **negative HP is preserved; self or another living player can spend an owned healing card to rescue the active DYING target**. Each use consumes one card; at -1, two +1 uses reach 0 then 1. Dying priority remains until HP > 0. This supersedes earlier simulation-only/clamped-HP records below. Card descriptions and selection text use `data/cards.json`.
@@ -18,6 +34,65 @@
 - Latest v0.5 validation: **13/13 regression suites PASS plus UI smoke PASS**, with warnings-as-errors enabled in the temporary project. Stop after v0.5 / UI v0.2; Stage 0.3 has not been started.
 - All four handoff documents are updated for v0.5; earlier snapshot findings and test records are explicitly historical.
 - No commit or push was performed. Pre-existing workspace edits and handoff files were preserved.
+
+## Compact uppercase cards, tool zones and target filtering — 2026-11-06
+
+- Reduced the shared face/back size from 108x148 to 88x120 and adjusted the hand viewport/fonts. Card titles use to_upper() only for presentation; JSON, tooltips and name-only log text are preserved.
+- Hủy/Cướp pickers group nonempty hand/equipment/judgment zones into separate labeled panels with counts. Equipment remains face-up; hand/judgment visibility is unchanged. Choice buttons carry card/zone metadata; cross-group selection deselects the previous choice and commits the correct zone. No payment occurs during selection/cancellation.
+- Attack/tool selection filters seats through the existing ActionValidator, using the active actor/card/counter. Illegal self, range, life-state or empty-zone targets are dimmed and cannot be selected. A target that becomes illegal on card/weapon change is cleared; Confirm is disabled until a valid target is selected. Cancel restores normal non-eliminated-seat availability. DISCARD and fixed-target response/rescue flows remain distinct. Final engine validation is unchanged.
+- Files changed: `scripts/dev/playable_prototype.gd`, `scripts/test/playable_prototype_smoke.gd`, GDD/ARCHITECTURE/DEVELOPMENT_PLAN/DEVELOPMENT_STATUS. No engine, JSON, scene, main or project-settings edits by this task; no commit/push.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy. Final logs have no script errors/warnings/load failures. New smoke cases verify uppercase/small faces; Attack self/out-of-range locks; Steal range/empty-target locks; Discard's unrestricted-distance valid target; stale-target clearing and Confirm readiness; range changes on Rifle/Crossbow equip; Bot target filtering; all three zone groups, source-zone selection and deselection across groups. Existing combat/rescue/equipment/winner scenarios remain covered.
+- Mouse helper now finds the nearest ScrollContainer ancestor, supporting cards nested in zone panels. OpenGL captures at 1280x720 visually verified smaller cards, dimmed invalid Attack targets and a tool picker containing all three zones. `git diff --check` passed. Known certificate/editor-settings environment diagnostics remain separate from script results.
+- Temporary evidence project: `C:/Users/Admin/AppData/Local/Temp/tactics-target-zones-49d83fe27f194b6681eee98a02ede9ca`. Used the same copy/import/runner setup as previous records; commands: `--headless --path <project> --editor --import --quit`, `--headless --path <project> --script res://regression_runner.gd --quit-after 1800`, `--headless --path <project> --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800`; capture via `--path <project> --rendering-method gl_compatibility --script res://capture.gd --quit-after 600`. Logs: import.log/regression.log/ui-smoke.log/capture.log. Capture helper prepares hand/equipment/judgment fixtures via existing transfer APIs; helpers/images stay outside the repository.
+
+## Compact log, deck counters and top-only card corners — 2026-11-06
+
+- Removed blank lines between Event Log entries. Selection/equip/attack/heal log references use card names, without the JSON description or rank/suit; hover descriptions remain available. Other gameplay results/status messages remain intact.
+- Moved draw/discard count display out of the table center into DeckInfoPanel at the right of the bottom action row, alongside the shuffle count. Added Deck.shuffle_count as telemetry incremented by each existing shuffle() call, including the initial GameState shuffle, explicit calls and automatic discard recycling; RNG/draw/recycle rules are unchanged. Merely attempting to recycle with an active draw pile or two empty piles does not call shuffle or increment it.
+- Removed the bottom rank/suit and duplicate central suit emblem from the shared portrait-card builder. Top rank/suit and centered name remain consistent across hand/response/rescue/equipment cards.
+- Files changed: `scripts/dev/playable_prototype.gd`, `scripts/cards/deck.gd`, `scripts/test/deck_test.gd`, `scripts/test/playable_prototype_smoke.gd`, and GDD/ARCHITECTURE/DEVELOPMENT_PLAN/DEVELOPMENT_STATUS. No card/deck JSON, scene, main or project-setting edits by this task.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS** on Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy. Inspected completion markers and logs; no SCRIPT ERROR, warnings or load failures. DeckTest verifies count 2 after setup + explicit shuffle, unchanged by rejected recycle/empty draw, then 3 after automatic recycling. UI smoke verifies single-newline entries, exact selected-card-name log, only two face labels, separate panel position, draw count and initial shuffle count. Existing gameplay/contextual-disable smoke scenarios retained.
+- Rendered/visually inspected the OpenGL 1280x720 equipped-table preview: dense log, simple card faces and independent lower-right counters fit the layout. `git diff --check` passed. Known certificate/editor-settings diagnostics remain unrelated to script validation. No commit/push.
+
+Validation commands (same temporary-copy setup and all-suite runner as earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$compactPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-compact-log-35d903277c834fabaa4ba43f08c590d8'
+& $godotExecutable --headless --path $compactPath --editor --import --quit --log-file (Join-Path $compactPath 'import.log')
+& $godotExecutable --headless --path $compactPath --script res://regression_runner.gd --quit-after 1800 --log-file (Join-Path $compactPath 'regression.log')
+& $godotExecutable --headless --path $compactPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800 --log-file (Join-Path $compactPath 'ui-smoke.log')
+& $godotExecutable --path $compactPath --rendering-method gl_compatibility --script res://capture.gd --quit-after 600 --log-file (Join-Path $compactPath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper follows the previous equipment/tool/winner capture workflow using engine APIs only; screenshots/helpers remain outside the repository.
+
+## UI presentation and contextual interaction — 2026-11-06
+
+- Removed the right Debug sidebar, selector/draw/force-response controls and redundant non-modal rescue/finalize row. The Event Log is now in the top header; the four-seat table fills the width with anchored positions preserving Human -> Bot 1/right -> Bot 2/top -> Bot 3/left. Bot turns remain manually playable through the lower hand/Confirm/End Turn, without AI or gameplay changes.
+- Added reusable native portrait card faces (108x148) with light paper color, rounded border, top/bottom rank/suit, suit emblem and centered name. Response/rescue/face-up equipment pickers reuse this layout. JSON descriptions stay in tooltips; no image assets or description paragraphs were added to card faces.
+- Seat health uses filled/empty hearts; DYING at negative HP shows empty hearts plus the exact negative number. Modal rescue also shows the deficit. Eliminated seats are greyed/disabled, their selection is cleared, and direct UI selection attempts are rejected. Match-end lock/restart still works.
+- The hand uses existing ActionValidator queries to determine contextual availability. Dodge is unavailable for normal PLAY; full-HP healing, Attack with no legal target/remaining use, and tools without a valid target are disabled. Required DISCARD still permits any owned card, including Dodge. Target response/rescue modal cards remain selectable in their own context. Executor remains the final authority; no direct HP/phase/window mutations from UI.
+- Files changed in this follow-up: `scripts/dev/playable_prototype.gd`, `scripts/test/playable_prototype_smoke.gd`, `docs/GDD.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_PLAN.md`, this document. Engine/Card JSON, scenes, main and project settings were preserved.
+- Actual validation: **13/13 regression suites PASS and UI smoke PASS**, Godot `4.7.2.stable.official.ed1daf0bf`, warnings-as-errors enabled in a fresh temporary copy. All suite completion output and script-error logs inspected; no script errors/warnings/load failures in final runs. Smoke fixtures now prepare cards through existing engine APIs rather than deleted Debug widgets, and exercise Bot actions through the shared hand. Added assertions for absence of Debug controls, log position, portrait card fields, full/wounded/negative hearts, disabled Dodge/full-HP heal, Dodge selection in DISCARD, and disabled/de-selected eliminated targets.
+- During UI testing a real mouse click initially targeted a card outside the horizontal scroll viewport; the smoke helper now waits for layout and uses ensure_control_visible before sending mouse input. The final smoke rerun passes with no SCRIPT ERROR, rather than relying only on its completion print. Existing combat/equip/rescue/tool/winner scenarios remain covered.
+- Desktop OpenGL 1280x720 previews were rendered and visually inspected for the active table, mixed hidden/face-up tool cards and match-end disabled state. Seat bounds were adjusted to contain the added text within the table. `git diff --check` passed. Known certificate/editor-settings access diagnostics remain environmental.
+- No commit/push. Full weapon active effects and existing engine limitations remain outside this UI-only change.
+
+Validation commands (temporary setup/runner follows the earlier records):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$uiPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-table-ui-90042b5f389f440691a3a0f420703ca5'
+& $godotExecutable --headless --path $uiPath --editor --import --quit --log-file (Join-Path $uiPath 'import.log')
+& $godotExecutable --headless --path $uiPath --script res://regression_runner.gd --quit-after 1800 --log-file (Join-Path $uiPath 'regression.log')
+& $godotExecutable --headless --path $uiPath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 1800 --log-file (Join-Path $uiPath 'ui-smoke.log')
+& $godotExecutable --path $uiPath --rendering-method gl_compatibility --script res://capture.gd --quit-after 600 --log-file (Join-Path $uiPath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary capture helper uses engine transfer/equip/damage/finalize APIs to render equipped.png, face-up-equipment.png and winner.png. Helpers/screenshots remain outside the repository. Regression ran once on the unchanged engine; UI smoke was rerun after the interaction/layout corrections.
 
 ## Basic equipment, discard log, survivor victory and visible equipment — 2026-11-06
 

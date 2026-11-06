@@ -21,7 +21,7 @@ var _prompt: Label
 var _feedback: Label
 var _piles: Label
 var _selection: Label
-var _bot_cards: OptionButton
+
 var _event_log: RichTextLabel
 var _events: Array[String] = []
 var _direction: Label
@@ -36,6 +36,7 @@ var _choice_target_id: int = 0
 var _choice_played_card_id: int = 0
 var _choice_selected_card_id: int = 0
 var _choice_zone: String = ""
+var _choice_card_count: int = 0
 var _dying_rescuer_id: int = 0
 
 
@@ -100,134 +101,134 @@ func _build_ui() -> void:
 		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 	var page: VBoxContainer = VBoxContainer.new()
-	page.add_theme_constant_override("separation", 10)
+	page.add_theme_constant_override("separation", 8)
 	margin.add_child(page)
 	var header: HBoxContainer = HBoxContainer.new()
+	header.add_theme_constant_override("separation", 20)
 	page.add_child(header)
-	_label(header, "TACTICS  /  SALOON", 26).add_theme_color_override("font_color", GOLD)
-	_phase = _label(header, "", 18)
+	var identity: VBoxContainer = VBoxContainer.new()
+	identity.custom_minimum_size.x = 410.0
+	header.add_child(identity)
+	_label(identity, "TACTICS  /  SALOON", 24).add_theme_color_override("font_color", GOLD)
+	_phase = _label(identity, "", 16)
 	_phase.name = "PhaseLabel"
-	_phase.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_phase.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_button(header, "Bàn mới", _new_table).name = "NewTable"
-	_direction = _label(page, "", 14)
-	var body: HBoxContainer = HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 16)
-	page.add_child(body)
-	var play: VBoxContainer = VBoxContainer.new()
-	play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	play.add_theme_constant_override("separation", 8)
-	body.add_child(play)
+	_phase.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_direction = _label(identity, "", 13)
+	_direction.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_build_event_log(header)
+	var new_table: Button = _button(header, "Bàn mới", _new_table)
+	new_table.name = "NewTable"
+	new_table.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var table: PanelContainer = PanelContainer.new()
+	table.name = "BotTable"
 	table.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	table.add_theme_stylebox_override("panel", _style(Color("20372e"), Color("8b7049")))
-	play.add_child(table)
-	var table_rows: VBoxContainer = VBoxContainer.new()
-	table_rows.add_theme_constant_override("separation", 8)
-	table.add_child(table_rows)
+	page.add_child(table)
+	var layout: Control = Control.new()
+	layout.custom_minimum_size.y = 220.0
+	table.add_child(layout)
 	_seats.resize(4)
-	var top: CenterContainer = CenterContainer.new()
-	table_rows.add_child(top)
-	_create_seat(top, 3)
-	var middle: HBoxContainer = HBoxContainer.new()
-	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	table_rows.add_child(middle)
-	_create_seat(middle, 4)
+	for player_id: int in range(2, 5):
+		_create_seat(layout, player_id)
 	var center: VBoxContainer = VBoxContainer.new()
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_left = 240.0
+	center.offset_right = -240.0
+	center.offset_top = 75.0
+	center.offset_bottom = -75.0
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	middle.add_child(center)
-	_piles = _label(center, "", 18)
-	_piles.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layout.add_child(center)
 	_prompt = _label(center, "")
 	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_create_seat(middle, 2)
-	var bottom: CenterContainer = CenterContainer.new()
-	table_rows.add_child(bottom)
-	_create_seat(bottom, 1)
-	_selection = _label(play, "Chọn bài trên tay, rồi chọn người trên bàn.")
+	var personal_row: HBoxContainer = HBoxContainer.new()
+	personal_row.add_theme_constant_override("separation", 16)
+	page.add_child(personal_row)
+	var human_panel: PanelContainer = PanelContainer.new()
+	human_panel.name = "HumanInfoPanel"
+	personal_row.add_child(human_panel)
+	var human_info: VBoxContainer = VBoxContainer.new()
+	human_panel.add_child(human_info)
+	_label(human_info, "NGƯỜI CHƠI CỦA BẠN", 13).add_theme_color_override("font_color", GOLD)
+	_create_seat(human_info, HUMAN_ID)
+	var hand_column: VBoxContainer = VBoxContainer.new()
+	hand_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	personal_row.add_child(hand_column)
+	_selection = _label(hand_column, "Chọn bài trên tay, rồi chọn mục tiêu.", 14)
 	var hand_scroll: ScrollContainer = ScrollContainer.new()
-	hand_scroll.custom_minimum_size.y = 94.0
+	hand_scroll.name = "HandScroll"
+	hand_scroll.custom_minimum_size.y = 148.0
 	hand_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	play.add_child(hand_scroll)
+	hand_column.add_child(hand_scroll)
 	_hand = HBoxContainer.new()
-	_hand.add_theme_constant_override("separation", 8)
+	_hand.add_theme_constant_override("separation", 10)
 	hand_scroll.add_child(_hand)
 	var actions: HBoxContainer = HBoxContainer.new()
-	play.add_child(actions)
+	page.add_child(actions)
 	_button(actions, "Đồng ý", _confirm_hand_action).name = "ActionConfirm"
 	_button(actions, "Huỷ bỏ", _cancel_hand_action).name = "ActionCancel"
 	_button(actions, "Kết thúc lượt", _end_current_turn).name = "EndTurn"
-	var rescue_row: HBoxContainer = HBoxContainer.new()
-	play.add_child(rescue_row)
-	_button(rescue_row, "Chọn lá cứu", _rescue.bind(HUMAN_ID)).name = "HumanRescue"
-	_button(rescue_row, "Finalize Dying", _finalize_dying).name = "FinalizeDying"
-	_feedback = _label(play, "")
+	var spacer: Control = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(spacer)
+	var deck_info: PanelContainer = PanelContainer.new()
+	deck_info.name = "DeckInfoPanel"
+	actions.add_child(deck_info)
+	_piles = _label(deck_info, "", 14)
+	_piles.name = "DeckInfoLabel"
+	_feedback = _label(page, "", 14)
 	_feedback.custom_minimum_size.y = 34.0
 	_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_build_sidebar(body)
 
 
 func _create_seat(parent: Node, player_id: int) -> void:
 	var seat: Button = _button(parent, "", _select_target.bind(player_id))
 	seat.name = "Seat%d" % player_id
-	seat.custom_minimum_size = Vector2(190.0, 76.0)
 	seat.add_theme_font_size_override("font_size", 14)
 	seat.toggle_mode = true
-	seat.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if player_id == HUMAN_ID:
+		seat.custom_minimum_size = Vector2(216.0, 100.0)
+		_seats[player_id - 1] = seat
+		return
+	var position: Vector2 = Vector2(0.5, 1.0)
+	if player_id == 2:
+		position = Vector2(1.0, 0.5)
+	elif player_id == 3:
+		position = Vector2(0.5, 0.0)
+	elif player_id == 4:
+		position = Vector2(0.0, 0.5)
+	seat.anchor_left = position.x
+	seat.anchor_right = position.x
+	seat.anchor_top = position.y
+	seat.anchor_bottom = position.y
+	seat.offset_left = -108.0 if position.x > 0.0 else 0.0
+	seat.offset_right = 108.0 if position.x < 1.0 else 0.0
+	if player_id == 2:
+		seat.offset_left = -216.0
+	elif player_id == 4:
+		seat.offset_right = 216.0
+	seat.offset_top = -100.0 if player_id == 1 else (-50.0 if position.y == 0.5 else 0.0)
+	seat.offset_bottom = 0.0 if player_id == 1 else (50.0 if position.y == 0.5 else 100.0)
 	_seats[player_id - 1] = seat
 
 
-func _build_sidebar(parent: Node) -> void:
+func _build_event_log(parent: Node) -> void:
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size.x = 330.0
+	panel.name = "EventLogPanel"
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size.y = 82.0
 	parent.add_child(panel)
-	var sidebar: VBoxContainer = VBoxContainer.new()
-	sidebar.add_theme_constant_override("separation", 6)
-	panel.add_child(sidebar)
-	_label(sidebar, "ĐIỀU KHIỂN BOT · DEBUG", 18).add_theme_color_override("font_color", GOLD)
-	var bots: OptionButton = OptionButton.new()
-	bots.name = "DebugActor"
-	for bot_id: int in range(2, 5):
-		bots.add_item("Bot %d · điều khiển thủ công" % (bot_id - 1), bot_id)
-	bots.item_selected.connect(_select_bot)
-	sidebar.add_child(bots)
-	_bot_cards = OptionButton.new()
-	_bot_cards.name = "DebugCard"
-	_bot_cards.clip_text = true
-	_bot_cards.item_selected.connect(_select_bot_card)
-	sidebar.add_child(_bot_cards)
-	var attacks: HBoxContainer = HBoxContainer.new()
-	sidebar.add_child(attacks)
-	_button(attacks, "Bot: Dùng bài", _bot_attack).name = "BotAttack"
-	_button(attacks, "Rút 1", _bot_draw).name = "BotDraw"
-	var responses: HBoxContainer = HBoxContainer.new()
-	sidebar.add_child(responses)
-	_button(responses, "Bot: Né", _bot_dodge).name = "BotDodge"
-	_button(responses, "Bot: Không Né", _bot_pass).name = "BotPass"
-	var turn_actions: HBoxContainer = HBoxContainer.new()
-	sidebar.add_child(turn_actions)
-	_button(turn_actions, "Bot: Kết thúc lượt", _bot_end_turn).name = "BotEndTurn"
-	_button(turn_actions, "Bỏ lá", _bot_discard).name = "BotDiscard"
-	_button(sidebar, "Bot: Chọn lá cứu", _bot_rescue).name = "BotRescue"
-	var debug_draws: HBoxContainer = HBoxContainer.new()
-	sidebar.add_child(debug_draws)
-	_button(debug_draws, "Human: Rút 1", _debug_draw.bind(HUMAN_ID)).name = "HumanDraw"
-	_button(debug_draws, "Tiếp tục", _advance_phase).name = "DebugResume"
-	var limits: Label = _label(sidebar, "Chia 4 lá; rút 2 lá ở giai đoạn rút bài.\nTay Bot hiện khi đến lượt · DEBUG.\nCứu bằng lá Hồi máu; HP > 0 mới sống.\nPhán xét / 4 hiệu ứng vũ khí chưa có.", 14)
-	limits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_label(sidebar, "NHẬT KÝ BÀN CHƠI", 18).add_theme_color_override("font_color", GOLD)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	panel.add_child(row)
+	_label(row, "NHẬT KÝ\nVÁN ĐẤU", 14).add_theme_color_override("font_color", GOLD)
 	_event_log = RichTextLabel.new()
 	_event_log.name = "EventLog"
-	_event_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_event_log.custom_minimum_size.y = 80.0
+	_event_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_event_log.scroll_following = true
 	_event_log.selection_enabled = true
 	_event_log.add_theme_font_size_override("normal_font_size", 14)
-	sidebar.add_child(_event_log)
-
+	row.add_child(_event_log)
 
 func _new_table() -> void:
 	_choice_overlay.hide()
@@ -282,7 +283,7 @@ func _notify(message: String) -> void:
 	_events.append(message)
 	if _events.size() > 100:
 		_events.pop_front()
-	_event_log.text = "\n\n".join(_events)
+	_event_log.text = "\n".join(_events)
 
 
 func _record(action: String, result: ActionResult) -> void:
@@ -295,6 +296,9 @@ func _record(action: String, result: ActionResult) -> void:
 
 
 func _refresh() -> void:
+	var selected_player: Player = game_state.get_player(selected_target_id)
+	if selected_player != null and selected_player.is_eliminated():
+		selected_target_id = 0
 	var current: Player = combat.turn_manager.get_current_player()
 	var names: Array[String] = []
 	for player_id: int in combat.turn_manager.seat_order:
@@ -306,34 +310,38 @@ func _refresh() -> void:
 	if game_state.match_over:
 		_phase.text = "Trận đấu kết thúc · %s thắng cuộc!" % _name(game_state.winner_id)
 	_refresh_hand()
+	if selected_target_id != 0 and not _is_target_available(selected_target_id):
+		selected_target_id = 0
 	for player: Player in game_state.players:
 		var seat: Button = _seats[player.player_id - 1]
-		seat.text = "%s%s\nHP %d / %d · %s\n%d lá trên tay" % ["▶ " if player == current else "", player.display_name, player.hp, player.max_hp, Player.LifeState.keys()[player.life_state], player.get_hand_count()]
+		var state_text: String = "Hấp hối" if player.is_dying() else ("Đã loại" if player.is_eliminated() else "Đang chơi")
+		seat.text = "%s%s · %s\n%s\n%d lá trên tay" % ["▶ " if player == current and not game_state.match_over else "", player.display_name, state_text, _health_text(player), player.get_hand_count()]
 		var weapon: CardInstance = combat.get_weapon(player.player_id)
 		var attack_range: Dictionary = combat.get_attack_range(player.player_id)
 		var range_text: String = "?" if attack_range.is_empty() else ("∞" if attack_range["unlimited"] else str(attack_range["value"]))
 		seat.text += "\n%s · Tầm %s" % ["Vũ khí: —" if weapon == null else weapon.definition.display_name, range_text]
-		seat.tooltip_text = "" if weapon == null else weapon.definition.description
+		seat.tooltip_text = "Máu %d/%d" % [player.hp, player.max_hp] + ("" if weapon == null else "\n" + weapon.definition.description)
+		seat.disabled = not _is_target_available(player.player_id)
+		seat.modulate = Color("777777") if seat.disabled else Color.WHITE
 		seat.set_pressed_no_signal(player.player_id == selected_target_id)
 		seat.add_theme_stylebox_override("normal", _style(Color("3e4530") if player == current else Color("302c26"), GOLD if player == current else Color("62503c")))
-	_piles.text = "CHỒNG RÚT %d   /   CHỒNG BỎ %d" % [game_state.deck.get_draw_count(), game_state.deck.get_discard_count()]
+	_piles.text = "Chồng rút: %d · Chồng bỏ: %d · Xào: %d lần" % [game_state.deck.get_draw_count(), game_state.deck.get_discard_count(), game_state.deck.shuffle_count]
 	_prompt.text = combat.get_status_message()
 	if current != null and current.player_id != HUMAN_ID and combat.turn_manager.current_phase == TurnManager.Phase.PLAY:
-		_prompt.text = "Lượt %s · DEBUG: chọn bài phía dưới và nhấn Đồng ý." % current.display_name
+		_prompt.text = "Lượt %s · điều khiển thủ công qua tay bài phía dưới." % current.display_name
 	if combat.has_pending_dying():
 		_prompt.text = "%s đang hấp hối · ưu tiên xử lý trước mọi hành động." % _name(combat.executor.dying_manager.dying_player_id)
 	elif combat.has_pending_response():
 		var pending: Dictionary = combat.executor.pending_attack
 		_prompt.text = "%s → %s\nĐang chờ Né / Không Né" % [_name(int(pending["actor_id"])), _name(int(pending["target_id"]))]
-	_refresh_bot_cards()
 	var unblocked: bool = combat.turn_manager.get_transition_block_reason().is_empty()
-	var bot_turn: bool = current != null and current.player_id == selected_bot_id
 	(find_child("EndTurn", true, false) as Button).disabled = not (unblocked and current != null and combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
-	(find_child("BotEndTurn", true, false) as Button).disabled = not (unblocked and bot_turn and combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
 	var discarding: bool = unblocked and combat.turn_manager.current_phase == TurnManager.Phase.DISCARD and combat.turn_manager.get_required_discards() > 0
-	(find_child("BotDiscard", true, false) as Button).disabled = not (discarding and bot_turn)
-	(find_child("ActionConfirm", true, false) as Button).disabled = not (unblocked and current != null and selected_hand_card_id != 0 and (combat.turn_manager.current_phase == TurnManager.Phase.PLAY or discarding))
-	_selection.text = "Tay %s%s · %d lá   |   Mục tiêu: %s" % [_name(displayed_player_id), " · DEBUG" if displayed_player_id != HUMAN_ID else "", game_state.get_player(displayed_player_id).get_hand_count(), _name(selected_target_id)]
+	var selected_card: CardInstance = _find_card(displayed_player_id, selected_hand_card_id)
+	var needs_target: bool = selected_card != null and _card_requires_target(selected_card) and combat.turn_manager.current_phase == TurnManager.Phase.PLAY
+	var target_ready: bool = not needs_target or (selected_target_id != 0 and _is_target_available(selected_target_id))
+	(find_child("ActionConfirm", true, false) as Button).disabled = not (unblocked and current != null and selected_hand_card_id != 0 and target_ready and (combat.turn_manager.current_phase == TurnManager.Phase.PLAY or discarding))
+	_selection.text = "Tay %s%s · %d lá   |   Mục tiêu: %s" % [_name(displayed_player_id), " · thủ công" if displayed_player_id != HUMAN_ID else "", game_state.get_player(displayed_player_id).get_hand_count(), _name(selected_target_id)]
 	if game_state.match_over:
 		_prompt.text = "%s thắng cuộc!" % _name(game_state.winner_id)
 		_choice_kind = ""
@@ -367,31 +375,119 @@ func _refresh_hand() -> void:
 		selected_target_id = 0
 	if _find_card(player_id, selected_hand_card_id) == null:
 		selected_hand_card_id = 0
+	var selected_card: CardInstance = _find_card(player_id, selected_hand_card_id)
+	if selected_card != null and not _can_select_card(player_id, selected_card):
+		selected_hand_card_id = 0
 	var player: Player = game_state.get_player(player_id)
 	if player.hand.is_empty():
-		_label(_hand, "Tay trống. Đợi giai đoạn rút bài hoặc dùng nút Debug.")
+		_label(_hand, "Tay trống. Đợi giai đoạn rút bài.")
 	for card: CardInstance in player.hand:
-		var card_button: Button = _button(_hand, "%s\n%s%s" % [card.definition.display_name, card.get_rank_text(), CardInstance.SUIT_SYMBOLS[card.suit]], _select_hand_card.bind(card.instance_id))
+		var slot: Control = _create_card_slot(_hand)
+		var card_button: Button = _create_card_face(slot, card, _select_hand_card.bind(card.instance_id))
 		card_button.name = "Card%d" % card.instance_id
-		card_button.custom_minimum_size = Vector2(112.0, 76.0)
-		card_button.toggle_mode = true
-		card_button.set_pressed_no_signal(card.instance_id == selected_hand_card_id)
-		card_button.tooltip_text = card.definition.description
+		card_button.disabled = not _can_select_card(player_id, card)
+		_set_card_selection(card_button, card.instance_id == selected_hand_card_id, selected_hand_card_id != 0)
 
 
-func _refresh_bot_cards() -> void:
-	_bot_cards.clear()
-	var bot: Player = game_state.get_player(selected_bot_id)
-	if _find_card(selected_bot_id, selected_bot_card_id) == null:
-		selected_bot_card_id = 0
-	for card: CardInstance in bot.hand:
-		_bot_cards.add_item(card.get_display_name(), card.instance_id)
-		if selected_bot_card_id == 0:
-			selected_bot_card_id = card.instance_id
-		if card.instance_id == selected_bot_card_id:
-			_bot_cards.select(_bot_cards.item_count - 1)
-	if bot.hand.is_empty():
-		_bot_cards.add_item("Bot chưa có bài", 0)
+func _health_text(player: Player) -> String:
+	var filled: int = clampi(player.hp, 0, player.max_hp)
+	return "♥".repeat(filled) + "♡".repeat(player.max_hp - filled) + (" · %d" % player.hp if player.hp < 0 else "")
+
+
+func _can_select_card(player_id: int, card: CardInstance) -> bool:
+	if game_state.match_over or not combat.turn_manager.get_transition_block_reason().is_empty():
+		return false
+	var validator: ActionValidator = combat.executor.validator
+	if combat.turn_manager.current_phase == TurnManager.Phase.DISCARD:
+		return validator.validate_turn_discard(player_id, card.instance_id).valid
+	if card.definition.has_effect("restore_hp"):
+		return validator.validate_heal(player_id, card.instance_id).valid
+	if card.definition.is_equipment():
+		return validator.validate_equip_weapon(player_id, card.instance_id).valid
+	for target: Player in game_state.players:
+		if card.definition.has_effect("deal_attack"):
+			if validator.validate_attack(player_id, target.player_id, card.instance_id, combat.executor.attacks_used).valid:
+				return true
+		elif card.definition.has_effect("discard") or card.definition.has_effect("steal_card"):
+			if validator.validate_tool_use(player_id, target.player_id, card.instance_id).valid:
+				return true
+	return false
+
+
+func _card_requires_target(card: CardInstance) -> bool:
+	return card.definition.has_effect("deal_attack") or card.definition.has_effect("discard") or card.definition.has_effect("steal_card")
+
+
+func _is_target_available(player_id: int) -> bool:
+	var target: Player = game_state.get_player(player_id)
+	if target == null or target.is_eliminated() or game_state.match_over:
+		return false
+	var card: CardInstance = _find_card(displayed_player_id, selected_hand_card_id)
+	if card == null or combat.turn_manager.current_phase != TurnManager.Phase.PLAY:
+		return true
+	var validator: ActionValidator = combat.executor.validator
+	if card.definition.has_effect("deal_attack"):
+		return validator.validate_attack(displayed_player_id, player_id, card.instance_id, combat.executor.attacks_used).valid
+	if card.definition.has_effect("discard") or card.definition.has_effect("steal_card"):
+		return validator.validate_tool_use(displayed_player_id, player_id, card.instance_id).valid
+	return true
+
+
+func _create_card_slot(parent: Node) -> Control:
+	var slot: Control = Control.new()
+	slot.custom_minimum_size = Vector2(88.0, 132.0)
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(slot)
+	return slot
+
+
+func _set_card_selection(button: Button, selected: bool, has_selection: bool) -> void:
+	button.set_pressed_no_signal(selected)
+	button.position.y = 0.0 if selected else 12.0
+	button.modulate = Color("999999") if button.disabled else (Color("aaaaaa") if has_selection and not selected else Color.WHITE)
+
+
+func _create_card_face(parent: Node, card: CardInstance, handler: Callable) -> Button:
+	var button: Button = _button(parent, "", handler)
+	button.custom_minimum_size = Vector2(88.0, 120.0)
+	button.toggle_mode = true
+	button.tooltip_text = card.definition.description
+	for state: String in ["normal", "hover", "pressed", "disabled"]:
+		var background: Color = Color("eee3cb")
+		var border: Color = Color("9e8052")
+		if state == "hover":
+			background = Color("fff1cf")
+		elif state == "pressed":
+			background = Color("e1be75")
+			border = Color("ffe5a4")
+		elif state == "disabled":
+			background = Color("95998e")
+			border = Color("61695f")
+		var box: StyleBoxFlat = _style(background, border)
+		box.set_border_width_all(2)
+		button.add_theme_stylebox_override(state, box)
+	var ink: Color = Color("a83c37") if card.is_red() else Color("293029")
+	var top: Label = _label(button, card.get_rank_text() + CardInstance.SUIT_SYMBOLS[card.suit], 14)
+	top.name = "RankTop"
+	top.position = Vector2(7.0, 5.0)
+	top.add_theme_color_override("font_color", ink)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var center: VBoxContainer = VBoxContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_left = 6.0
+	center.offset_right = -6.0
+	center.offset_top = 26.0
+	center.offset_bottom = -12.0
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(center)
+	var title: Label = _label(center, card.definition.display_name.to_upper(), 13)
+	title.name = "CardTitle"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_color_override("font_color", Color("293029"))
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return button
 
 
 func _name(player_id: int) -> String:
@@ -411,18 +507,22 @@ func _card_usage(card: CardInstance) -> String:
 
 
 func _select_target(player_id: int) -> void:
+	var player: Player = game_state.get_player(player_id)
+	if player == null or not _is_target_available(player_id):
+		return
 	selected_target_id = player_id
 	_refresh()
 
 
 func _select_hand_card(card_id: int) -> void:
+	var card: CardInstance = _find_card(displayed_player_id, card_id)
+	if card == null or not _can_select_card(displayed_player_id, card):
+		_feedback.text = "Chưa thể sử dụng lá này ở thời điểm hiện tại."
+		return
 	selected_hand_card_id = card_id
 	if displayed_player_id == HUMAN_ID:
 		selected_human_card_id = card_id
-	var card: CardInstance = _find_card(displayed_player_id, card_id)
-	if card == null:
-		return
-	_notify("Đã chọn " + card.get_display_name() + " · " + _card_usage(card))
+	_feedback.text = "Đã chọn " + card.definition.display_name
 	_refresh()
 
 
@@ -452,7 +552,7 @@ func _cancel_hand_action() -> void:
 	selected_human_card_id = 0
 	selected_bot_card_id = 0
 	selected_target_id = 0
-	_notify("Đã huỷ lựa chọn; không tiêu hao bài.")
+	_feedback.text = "Đã huỷ lựa chọn; không tiêu hao bài."
 	_refresh()
 
 
@@ -462,43 +562,33 @@ func _end_current_turn() -> void:
 		_end_turn(current.player_id)
 
 
-func _select_bot(index: int) -> void:
-	selected_bot_id = index + 2
-	selected_bot_card_id = 0
-	_refresh()
-
-
-func _select_bot_card(index: int) -> void:
-	selected_bot_card_id = _bot_cards.get_item_id(index)
-
-
 func _attack(actor_id: int) -> void:
 	if combat == null:
 		return
 	var card_id: int = selected_human_card_id if actor_id == HUMAN_ID else selected_bot_card_id
 	var card: CardInstance = _find_card(actor_id, card_id)
 	if card == null:
-		_notify("Chọn một lá bài trước.")
+		_feedback.text = "Chọn một lá bài trước."
 		return
 	if card.definition.is_equipment():
 		var equipped: ActionResult = combat.equip_weapon(actor_id, card_id)
-		_record("%s trang bị %s" % [_name(actor_id), card.get_display_name()], equipped)
+		_record("%s trang bị %s" % [_name(actor_id), card.definition.display_name], equipped)
 		if equipped.valid and not card.definition.has_effect("remove_attack_limit"):
 			_notify("Tầm vũ khí đã có hiệu lực. Hiệu ứng riêng của %s chưa được triển khai." % card.definition.display_name)
 		return
 	if card.definition.has_effect("restore_hp"):
-		_record("%s dùng %s để tự hồi máu" % [_name(actor_id), card.get_display_name()], combat.use_heal(actor_id, card_id))
+		_record("%s dùng %s để tự hồi máu" % [_name(actor_id), card.definition.display_name], combat.use_heal(actor_id, card_id))
 		return
 	if selected_target_id == 0:
-		_notify("Chọn một lá bài và một mục tiêu trên bàn trước.")
+		_feedback.text = "Chọn một lá bài và một mục tiêu trên bàn trước."
 		return
 	if not card.definition.has_effect("deal_attack"):
 		if card.definition.has_effect("discard") or card.definition.has_effect("steal_card"):
 			_open_tool_choice(actor_id, selected_target_id, card_id)
 			return
-		_notify("Lá này không dùng để Attack. " + _card_usage(card) + ".")
+		_feedback.text = "Không thể dùng %s bằng thao tác này." % card.definition.display_name
 		return
-	_record("%s Tấn công %s bằng %s" % [_name(actor_id), _name(selected_target_id), card.get_display_name()], combat.use_attack(actor_id, selected_target_id, card_id))
+	_record("%s Tấn công %s bằng %s" % [_name(actor_id), _name(selected_target_id), card.definition.display_name], combat.use_attack(actor_id, selected_target_id, card_id))
 
 
 func _respond(player_id: int, use_dodge: bool) -> void:
@@ -513,11 +603,6 @@ func _respond(player_id: int, use_dodge: bool) -> void:
 	_record("%s %s" % [_name(player_id), "dùng Né" if use_dodge else "không Né"], combat.respond_to_attack(player_id, card_id))
 	var player: Player = game_state.get_player(player_id)
 	_notify("%s: HP %d/%d · %s" % [player.display_name, player.hp, player.max_hp, Player.LifeState.keys()[player.life_state]])
-
-
-func _advance_phase() -> void:
-	if combat != null:
-		_record("Debug: tiếp tục auto-advance", combat.advance_until_decision())
 
 
 func _end_turn(player_id: int) -> void:
@@ -540,51 +625,6 @@ func _rescue(rescuer_id: int) -> void:
 func _finalize_dying() -> void:
 	if combat != null:
 		_record("Finalize Dying: " + _name(combat.executor.dying_manager.dying_player_id), combat.finalize_dying())
-
-
-func _debug_draw(player_id: int) -> void:
-	if combat == null:
-		return
-	if game_state.match_over:
-		_notify(combat.get_status_message())
-		return
-	if combat.has_pending_response() or combat.has_pending_dying():
-		_notify("Debug rút bài tạm khóa trong cửa sổ phản ứng / hấp hối.")
-		return
-	if not game_state.get_player(player_id).is_alive():
-		_notify("Không rút Debug cho người DYING / ELIMINATED.")
-		return
-	var card: CardInstance = game_state.draw_card(player_id)
-	_notify("Debug: %s rút %s" % [_name(player_id), "thất bại: không còn bài khả dụng" if card == null else card.get_display_name()])
-	_refresh()
-
-
-func _bot_attack() -> void:
-	_attack(selected_bot_id)
-
-
-func _bot_draw() -> void:
-	_debug_draw(selected_bot_id)
-
-
-func _bot_dodge() -> void:
-	_respond(selected_bot_id, true)
-
-
-func _bot_pass() -> void:
-	_respond(selected_bot_id, false)
-
-
-func _bot_rescue() -> void:
-	_rescue(selected_bot_id)
-
-
-func _bot_end_turn() -> void:
-	_end_turn(selected_bot_id)
-
-
-func _bot_discard() -> void:
-	_discard(selected_bot_id)
 
 
 func _build_choice_overlay() -> void:
@@ -630,6 +670,7 @@ func _prepare_choice(kind: String, actor_id: int, target_id: int, card_id: int) 
 	_choice_played_card_id = card_id
 	_choice_selected_card_id = 0
 	_choice_zone = ""
+	_choice_card_count = 0
 	_choice_confirm.text = "Đồng ý"
 	_choice_confirm.disabled = true
 	for child: Node in _choice_cards.get_children():
@@ -638,27 +679,47 @@ func _prepare_choice(kind: String, actor_id: int, target_id: int, card_id: int) 
 	_choice_overlay.show()
 
 
-func _add_choice_card(card_id: int, zone: String, caption: String, hidden: bool) -> void:
-	var index: int = _choice_cards.get_child_count()
-	var button: Button = _button(_choice_cards, caption, _select_choice_card.bind(card_id, zone, index))
+func _add_choice_card(card_id: int, zone: String, caption: String, hidden: bool, row: HBoxContainer = null) -> void:
+	var index: int = _choice_card_count
+	_choice_card_count += 1
+	var parent: HBoxContainer = _choice_cards if row == null else row
+	var slot: Control = _create_card_slot(parent)
+	var handler: Callable = _select_choice_card.bind(card_id, zone, index)
+	var button: Button
+	if hidden:
+		button = _button(slot, caption, handler)
+		button.custom_minimum_size = Vector2(88.0, 120.0)
+		button.add_theme_font_size_override("font_size", 12)
+	else:
+		var owner_id: int = _dying_rescuer_id if _choice_kind == "dying" else _choice_target_id
+		var card: CardInstance = null
+		for candidate: CardInstance in game_state.get_player(owner_id).get_zone(zone):
+			if candidate.instance_id == card_id:
+				card = candidate
+				break
+		if card == null:
+			return
+		button = _create_card_face(slot, card, handler)
 	button.name = "HiddenCard%d" % index if hidden else ("EquipmentCard%d" % card_id if _choice_kind == "tool" else ("RescueCard%d" % card_id if _choice_kind == "dying" else "DodgeCard%d" % card_id))
-	button.custom_minimum_size = Vector2(135.0, 110.0)
 	button.toggle_mode = true
+	button.set_meta("choice_card_id", card_id)
+	button.set_meta("choice_zone", zone)
+	_set_card_selection(button, false, false)
 
 
-func _select_choice_card(card_id: int, zone: String, index: int) -> void:
+func _select_choice_card(card_id: int, zone: String, _index: int) -> void:
 	_choice_selected_card_id = card_id
 	_choice_zone = zone
 	_choice_confirm.disabled = false
-	for child: Node in _choice_cards.get_children():
-		if child is Button:
-			(child as Button).set_pressed_no_signal(child.get_index() == index)
+	for child: Node in _choice_cards.find_children("*", "Button", true, false):
+		if child.has_meta("choice_card_id"):
+			_set_card_selection(child as Button, child.get_meta("choice_card_id") == card_id and child.get_meta("choice_zone") == zone, true)
 
 
 func _open_dying_choice(target_id: int, preferred_rescuer: int = 0) -> void:
 	_prepare_choice("dying", 0, target_id, 0)
 	var player: Player = game_state.get_player(target_id)
-	_choice_title.text = "%s đang hấp hối · HP %d/%d\nCần hồi ít nhất %d HP. Chọn người cứu và lá Hồi máu." % [player.display_name, player.hp, player.max_hp, 1 - player.hp]
+	_choice_title.text = "%s đang hấp hối · %s\nCần hồi ít nhất %d HP. Chọn người cứu và lá Hồi máu." % [player.display_name, _health_text(player), 1 - player.hp]
 	_choice_cancel.text = "Không cứu · loại người chơi"
 	if preferred_rescuer == 0:
 		preferred_rescuer = _dying_rescuer_id
@@ -680,7 +741,6 @@ func _open_dying_choice(target_id: int, preferred_rescuer: int = 0) -> void:
 	for card: CardInstance in game_state.get_player(_dying_rescuer_id).hand:
 		if card.definition.has_effect("restore_hp"):
 			_add_choice_card(card.instance_id, "hand", card.get_display_name(), false)
-			(_choice_cards.get_child(_choice_cards.get_child_count() - 1) as Button).tooltip_text = card.definition.description
 	if _choice_cards.get_child_count() == 1:
 		_label(_choice_cards, "Không có lá Hồi máu.\nCó thể chọn người cứu khác.")
 
@@ -693,18 +753,18 @@ func _select_dying_rescuer(index: int) -> void:
 func _open_response_choice(target_id: int) -> void:
 	_prepare_choice("response", target_id, target_id, 0)
 	_choice_title.text = "%s bị Tấn công: chọn lá Né rồi nhấn Đồng ý.\nBot được điều khiển thủ công." % _name(target_id)
-	_choice_cancel.text = "Không Né"
+	_choice_cancel.text = "Huỷ bỏ"
 	for card: CardInstance in game_state.get_player(target_id).hand:
 		if card.definition.has_effect("block_attack"):
 			_add_choice_card(card.instance_id, "hand", card.get_display_name(), false)
 	if _choice_cards.get_child_count() == 0:
-		_label(_choice_cards, "Không có lá Né. Chọn Không Né để nhận sát thương.")
+		_label(_choice_cards, "Không có lá Né. Chọn Huỷ bỏ để nhận sát thương.")
 
 
 func _open_tool_choice(actor_id: int, target_id: int, card_id: int) -> void:
 	var validation: ActionResult = combat.executor.validator.validate_tool_use(actor_id, target_id, card_id)
 	if not validation.valid:
-		_notify(validation.reason)
+		_feedback.text = validation.reason
 		return
 	var effect: Dictionary = combat.executor.validator.get_tool_effect(actor_id, card_id)
 	var parameters: Dictionary = effect["parameters"]
@@ -713,16 +773,23 @@ func _open_tool_choice(actor_id: int, target_id: int, card_id: int) -> void:
 	_choice_cancel.text = "Huỷ bỏ"
 	var zones: Array = parameters["target_zones"]
 	for zone: String in zones:
-		for card: CardInstance in game_state.get_player(target_id).get_zone(zone):
-			var zone_label: String = "Trên tay"
-			if zone == "equipment":
-				zone_label = "Trang bị"
-			elif zone == "judgment":
-				zone_label = "Phán xét"
+		var cards: Array[CardInstance] = game_state.get_player(target_id).get_zone(zone)
+		if cards.is_empty():
+			continue
+		var zone_label: String = "TRÊN TAY" if zone == "hand" else ("TRANG BỊ" if zone == "equipment" else "PHÁN XÉT")
+		var section: PanelContainer = PanelContainer.new()
+		section.name = "ToolZone_" + zone
+		_choice_cards.add_child(section)
+		var column: VBoxContainer = VBoxContainer.new()
+		column.add_theme_constant_override("separation", 8)
+		section.add_child(column)
+		_label(column, "%s · %d LÁ" % [zone_label, cards.size()], 13).add_theme_color_override("font_color", GOLD)
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		column.add_child(row)
+		for card: CardInstance in cards:
 			var face_up: bool = zone == "equipment"
-			_add_choice_card(card.instance_id, zone, card.get_display_name() + "\n" + zone_label if face_up else "✦\nBÀI ÚP\n" + zone_label, not face_up)
-			if face_up:
-				(_choice_cards.get_child(_choice_cards.get_child_count() - 1) as Button).tooltip_text = card.definition.description
+			_add_choice_card(card.instance_id, zone, card.get_display_name() if face_up else "✦\nBÀI ÚP", not face_up, row)
 
 
 func _confirm_choice() -> void:
@@ -761,4 +828,4 @@ func _cancel_choice() -> void:
 	if response:
 		_record(_name(_choice_target_id) + " chọn Không Né", combat.respond_to_attack(_choice_target_id))
 	else:
-		_notify("Đã hủy chọn công cụ; không có lá bài nào bị tiêu hao.")
+		_feedback.text = "Đã hủy chọn công cụ; không có lá bài nào bị tiêu hao."

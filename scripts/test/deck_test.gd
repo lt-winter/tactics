@@ -53,11 +53,13 @@ static func run_all() -> void:
 	var deck: Deck = game.deck
 	deck.rng.seed = 12345
 	deck.shuffle()
+	assert(deck.shuffle_count == 2)
 
 	assert(deck.get_draw_count() == total)
 	assert(deck.get_discard_count() == 0)
 	assert(game.validate_state())
 	deck.recycle_discard_pile()
+	assert(deck.shuffle_count == 2)
 	assert(deck.get_draw_count() == total)
 	assert(game.draw_card(999) == null)
 	assert(deck.get_draw_count() == total)
@@ -82,6 +84,7 @@ static func run_all() -> void:
 
 	assert(deck.get_draw_count() == 0)
 	assert(game.draw_card(player.player_id) == null)
+	assert(deck.shuffle_count == 2)
 	assert(player.get_hand_count() == total)
 	assert(game.validate_state())
 
@@ -101,6 +104,7 @@ static func run_all() -> void:
 
 	# 6. Tái tạo chồng rút
 	var recycled_card: CardInstance = game.draw_card(player.player_id)
+	assert(deck.shuffle_count == 3)
 
 	assert(recycled_card != null)
 	assert(deck.get_draw_count() == total - 1)

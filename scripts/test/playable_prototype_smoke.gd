@@ -24,30 +24,59 @@ func _run() -> void:
 	var bot_one_seat: Button = _ui.find_child("Seat2", true, false) as Button
 	var bot_two_seat: Button = _ui.find_child("Seat3", true, false) as Button
 	var bot_three_seat: Button = _ui.find_child("Seat4", true, false) as Button
-	assert(bot_three_seat.get_global_rect().get_center().x < human_seat.get_global_rect().get_center().x)
-	assert(bot_one_seat.get_global_rect().get_center().x > human_seat.get_global_rect().get_center().x)
+	assert(bot_three_seat.get_global_rect().get_center().x < bot_two_seat.get_global_rect().get_center().x)
+	assert(bot_one_seat.get_global_rect().get_center().x > bot_two_seat.get_global_rect().get_center().x)
+	var human_panel: Control = _ui.find_child("HumanInfoPanel", true, false) as Control
+	var bot_table: Control = _ui.find_child("BotTable", true, false) as Control
+	assert(human_panel.is_ancestor_of(human_seat) and not bot_table.is_ancestor_of(human_seat))
+	assert(bot_table.is_ancestor_of(bot_one_seat) and bot_table.is_ancestor_of(bot_three_seat))
+	assert(human_panel.get_global_rect().position.y >= bot_table.get_global_rect().end.y)
 	assert(bot_two_seat.get_global_rect().get_center().y < bot_one_seat.get_global_rect().get_center().y)
 	assert(human_seat.get_global_rect().get_center().y > bot_three_seat.get_global_rect().get_center().y)
-	var visible_card: CardInstance = _ui.game_state.get_player(1).hand[0]
+	assert(_ui.find_child("DebugActor", true, false) == null)
+	assert(_ui.find_child("HumanDraw", true, false) == null)
+	var log_panel: Control = _ui.find_child("EventLogPanel", true, false) as Control
+	assert(log_panel.get_global_rect().end.y < bot_two_seat.get_global_rect().position.y)
+	assert(human_seat.text.contains("♥♥♥♥") and not human_seat.text.contains("HP "))
+	var visible_card: CardInstance = null
+	for card: CardInstance in _ui.game_state.get_player(1).hand:
+		if _ui._can_select_card(1, card):
+			visible_card = card
+			break
+	while visible_card == null:
+		var drawn: CardInstance = _ui.game_state.draw_card(1)
+		assert(drawn != null)
+		_ui._refresh()
+		if _ui._can_select_card(1, drawn):
+			visible_card = drawn
 	var compact_card: Button = _ui.find_child("Card%d" % visible_card.instance_id, true, false) as Button
-	assert(compact_card.text == "%s\n%s%s" % [visible_card.definition.display_name, visible_card.get_rank_text(), CardInstance.SUIT_SYMBOLS[visible_card.suit]])
+	assert(compact_card.size.y > compact_card.size.x)
+	assert((compact_card.find_child("CardTitle", true, false) as Label).text == visible_card.definition.display_name.to_upper())
+	assert(compact_card.custom_minimum_size == Vector2(88.0, 120.0))
+	assert((compact_card.find_child("RankTop", true, false) as Label).text == visible_card.get_rank_text() + CardInstance.SUIT_SYMBOLS[visible_card.suit])
+	assert(compact_card.find_children("*", "Label", true, false).size() == 2)
 	assert(compact_card.tooltip_text == visible_card.definition.description)
 	assert(_ui._card_usage(visible_card) == visible_card.definition.description)
+	var events_before_selection: Array[String] = _ui._events.duplicate()
 	await _click("Card%d" % visible_card.instance_id)
 	assert(_ui.selected_human_card_id == visible_card.instance_id)
+	var initial_log: RichTextLabel = _ui.find_child("EventLog", true, false) as RichTextLabel
+	assert(not initial_log.text.contains("\n\n"))
+	assert(_ui._events == events_before_selection)
+	assert((_ui.find_child("Card%d" % visible_card.instance_id, true, false) as Button).position.y == 0.0)
+	var deck_panel: Control = _ui.find_child("DeckInfoPanel", true, false) as Control
+	assert(deck_panel.get_global_rect().position.y > human_seat.get_global_rect().end.y)
+	var deck_label: Label = _ui.find_child("DeckInfoLabel", true, false) as Label
+	assert(deck_label.text.contains("Chồng rút: %d" % _ui.game_state.deck.get_draw_count()))
+	assert(deck_label.text.contains("Xào: 1 lần"))
 	await _click("Seat2")
 	assert(_ui.selected_target_id == 2)
-	var actors: OptionButton = _ui.find_child("DebugActor", true, false) as OptionButton
-	actors.select(1)
-	actors.item_selected.emit(1)
-	assert(_ui.selected_bot_id == 3)
-	actors.select(0)
-	actors.item_selected.emit(0)
 	for expected: int in [2, 3, 4, 1]:
 		_finish_current_turn()
 		assert(_ui.combat.turn_manager.get_current_player().player_id == expected)
 		assert(_ui.game_state.get_player(expected).get_hand_count() == 6)
 		assert(_ui.displayed_player_id == expected)
+		assert(human_panel.is_ancestor_of(human_seat) and human_seat.name == "Seat1")
 		for card: CardInstance in _ui.game_state.get_player(expected).hand:
 			assert(_ui.find_child("Card%d" % card.instance_id, true, false) != null)
 		for player: Player in _ui.game_state.players:
@@ -64,10 +93,12 @@ func _run() -> void:
 	_press("ActionConfirm")
 	assert(not _ui.combat.has_pending_response())
 	assert(_ui.game_state.get_player(1).get_hand_count() == full_count)
-	var event_log: RichTextLabel = _ui.find_child("EventLog", true, false) as RichTextLabel
-	assert(event_log.text.contains("chưa đầy HP"))
+	assert(_ui._feedback.text.contains("Chưa thể sử dụng"))
+	_press("ActionCancel")
 	_select_human_attack()
 	_press("Seat3")
+	assert((_ui.find_child("Seat3", true, false) as Button).disabled)
+	assert(_ui.selected_target_id == 0)
 	_press("ActionConfirm")
 	assert(not _ui.combat.has_pending_response())
 	assert(_ui.game_state.get_player(1).get_hand_count() == full_count)
@@ -76,7 +107,7 @@ func _run() -> void:
 	_press("NewTable")
 	_draw_all_for_human()
 	_make_target_dying()
-	_press("FinalizeDying")
+	_press("ChoiceCancel")
 	assert(_ui.game_state.get_player(2).is_eliminated())
 	assert(not _ui.combat.has_pending_dying())
 	_finish_current_turn()
@@ -85,10 +116,13 @@ func _run() -> void:
 	_test_bot_dodge()
 	_test_heal_and_cancel()
 	_test_weapon_equip()
+	_test_target_filtering()
+	_test_selection_presentation()
 	_test_dying_modal_priority()
 	_test_negative_hp_rescue_cards()
 	await _test_hidden_tools()
 	_test_winner_ui()
+	await _test_disabled_cards_and_seats()
 	_ui.queue_free()
 	await process_frame
 	print("=== PLAYABLE PROTOTYPE UI SMOKE PASSED ===")
@@ -104,6 +138,14 @@ func _press(node_name: String) -> void:
 func _click(node_name: String) -> void:
 	var button: Button = _ui.find_child(node_name, true, false) as Button
 	assert(button != null)
+	await process_frame
+	var ancestor: Node = button.get_parent()
+	while ancestor != null:
+		if ancestor is ScrollContainer:
+			(ancestor as ScrollContainer).ensure_control_visible(button)
+			await process_frame
+			break
+		ancestor = ancestor.get_parent()
 	var position_on_screen: Vector2 = button.get_global_rect().get_center()
 	for down: bool in [true, false]:
 		var event: InputEventMouseButton = InputEventMouseButton.new()
@@ -128,7 +170,7 @@ func _draw_all_for_human() -> void:
 		for card: CardInstance in cards:
 			assert(_ui.game_state.transfer_player_card(card.instance_id, player_id, "hand", 1, "hand"))
 	while _ui.game_state.deck.get_draw_count() > 0:
-		_press("HumanDraw")
+		assert(_ui.game_state.draw_card(1) != null)
 	_ui._refresh()
 	assert(_ui.game_state.validate_state())
 
@@ -167,7 +209,7 @@ func _test_lethal_and_rescue() -> void:
 	var phase_before: TurnManager.Phase = _ui.combat.turn_manager.current_phase
 	var hand_before: int = _ui.game_state.get_player(1).get_hand_count()
 	_press("EndTurn")
-	_press("HumanDraw")
+	assert((_ui.find_child("ActionConfirm", true, false) as Button).disabled)
 	assert(_ui.combat.turn_manager.current_phase == phase_before)
 	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before)
 	var rescue_card: CardInstance = _give_rescue_card(1)
@@ -181,16 +223,9 @@ func _test_lethal_and_rescue() -> void:
 
 
 func _select_bot_card(effect_id: String) -> void:
-	var card: CardInstance = _first_card(2, effect_id)
+	var card: CardInstance = _first_card(_ui.displayed_player_id, effect_id)
 	assert(card != null)
-	var options: OptionButton = _ui.find_child("DebugCard", true, false) as OptionButton
-	for index: int in range(options.item_count):
-		if options.get_item_id(index) == card.instance_id:
-			options.select(index)
-			options.item_selected.emit(index)
-			return
-	assert(false, "Bot card missing from the debug selector")
-
+	_press("Card%d" % card.instance_id)
 
 func _test_bot_attack_and_human_dodge() -> void:
 	_press("NewTable")
@@ -206,10 +241,11 @@ func _test_bot_attack_and_human_dodge() -> void:
 	_ui._refresh()
 	_press("EndTurn")
 	assert(_ui.combat.turn_manager.get_current_player().player_id == 2)
-	_select_bot(2)
 	_select_bot_card("deal_attack")
+	assert((_ui.find_child("Seat2", true, false) as Button).disabled)
+	assert((_ui.find_child("Seat4", true, false) as Button).disabled)
 	_press("Seat1")
-	_press("BotAttack")
+	_press("ActionConfirm")
 	assert(_ui.combat.has_pending_response())
 	_press("DodgeCard%d" % dodge.instance_id)
 	assert(_ui.combat.has_pending_response())
@@ -228,7 +264,6 @@ func _test_bot_dodge() -> void:
 	assert(dodge != null)
 	assert(_ui.game_state.transfer_player_card(dodge.instance_id, 1, "hand", 2, "hand"))
 	_ui._refresh()
-	_select_bot(2)
 	_select_human_attack()
 	_press("Seat2")
 	_press("ActionConfirm")
@@ -241,12 +276,6 @@ func _test_bot_dodge() -> void:
 	assert(not _ui.combat.has_pending_response())
 	assert(_ui.game_state.get_player(2).hp == 4)
 	assert(_ui.game_state.validate_state())
-
-
-func _select_bot(player_id: int) -> void:
-	var selector: OptionButton = _ui.find_child("DebugActor", true, false) as OptionButton
-	selector.select(player_id - 2)
-	selector.item_selected.emit(player_id - 2)
 
 
 func _finish_current_turn() -> void:
@@ -376,6 +405,86 @@ func _test_weapon_equip() -> void:
 	assert(_ui.game_state.validate_state())
 
 
+func _test_target_filtering() -> void:
+	_press("NewTable")
+	_draw_all_for_human()
+	var victim: CardInstance = _first_card(1, "block_attack")
+	assert(_ui.game_state.transfer_player_card(victim.instance_id, 1, "hand", 2, "hand"))
+	var other_victim: CardInstance = _first_card(1, "block_attack")
+	assert(_ui.game_state.transfer_player_card(other_victim.instance_id, 1, "hand", 3, "hand"))
+	_ui._refresh()
+	_select_human_attack()
+	assert((_ui.find_child("Seat1", true, false) as Button).disabled)
+	assert((_ui.find_child("Seat3", true, false) as Button).disabled)
+	assert(not (_ui.find_child("Seat2", true, false) as Button).disabled)
+	assert(not (_ui.find_child("Seat4", true, false) as Button).disabled)
+	assert((_ui.find_child("ActionConfirm", true, false) as Button).disabled)
+	_press("Seat3")
+	assert(_ui.selected_target_id == 0)
+	_press("Seat2")
+	assert(_ui.selected_target_id == 2)
+	var steal: CardInstance = _first_card(1, "steal_card")
+	_press("Card%d" % steal.instance_id)
+	assert(_ui.selected_target_id == 2)
+	assert((_ui.find_child("Seat4", true, false) as Button).disabled)
+	assert((_ui.find_child("Seat3", true, false) as Button).disabled)
+	var discard: CardInstance = _first_card(1, "discard")
+	_press("Card%d" % discard.instance_id)
+	assert(not (_ui.find_child("Seat3", true, false) as Button).disabled)
+	_press("Seat3")
+	assert(_ui.selected_target_id == 3)
+	_press("Card%d" % steal.instance_id)
+	assert(_ui.selected_target_id == 0)
+	assert((_ui.find_child("ActionConfirm", true, false) as Button).disabled)
+	_press("ActionCancel")
+	assert(not (_ui.find_child("Seat4", true, false) as Button).disabled)
+	var rifle: CardInstance = _first_card(1, "discard_equipment_on_hit")
+	_press("Card%d" % rifle.instance_id)
+	_press("ActionConfirm")
+	_select_human_attack()
+	assert(not (_ui.find_child("Seat3", true, false) as Button).disabled)
+	_press("Seat3")
+	var crossbow: CardInstance = _first_card(1, "remove_attack_limit")
+	_press("Card%d" % crossbow.instance_id)
+	_press("ActionConfirm")
+	_select_human_attack()
+	assert((_ui.find_child("Seat3", true, false) as Button).disabled and _ui.selected_target_id == 0)
+	assert(_ui.game_state.validate_state())
+
+
+func _test_selection_presentation() -> void:
+	_press("NewTable")
+	_draw_all_for_human()
+	var victim: CardInstance = _first_card(1, "block_attack")
+	assert(_ui.game_state.transfer_player_card(victim.instance_id, 1, "hand", 2, "hand"))
+	_ui._refresh()
+	var attack: CardInstance = _first_card(1, "deal_attack")
+	var other: CardInstance = _first_card(1, "discard")
+	var events_before: Array[String] = _ui._events.duplicate()
+	var hand_before: int = _ui.game_state.get_player(1).get_hand_count()
+	_press("Card%d" % attack.instance_id)
+	_press("Seat2")
+	var raised: Button = _ui.find_child("Card%d" % attack.instance_id, true, false) as Button
+	var dimmed: Button = _ui.find_child("Card%d" % other.instance_id, true, false) as Button
+	assert(raised.position.y == 0.0 and raised.modulate == Color.WHITE)
+	assert(dimmed.position.y == 12.0 and dimmed.modulate.r < 1.0 and not dimmed.disabled)
+	_press("Card%d" % other.instance_id)
+	raised = _ui.find_child("Card%d" % other.instance_id, true, false) as Button
+	dimmed = _ui.find_child("Card%d" % attack.instance_id, true, false) as Button
+	assert(raised.position.y == 0.0 and dimmed.position.y == 12.0)
+	assert(_ui._events == events_before)
+	_press("ActionCancel")
+	var reset: Button = _ui.find_child("Card%d" % attack.instance_id, true, false) as Button
+	assert(reset.position.y == 12.0 and reset.modulate == Color.WHITE)
+	assert(_ui._events == events_before)
+	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before)
+	_press("Card%d" % attack.instance_id)
+	_press("Seat2")
+	_press("ActionConfirm")
+	assert(_ui._events.size() > events_before.size() and _ui.combat.has_pending_response())
+	_press("ChoiceCancel")
+
+
 func _give_rescue_card(player_id: int) -> CardInstance:
 	for zone: String in ["draw", "discard"]:
 		var cards: Array[CardInstance] = _ui.game_state.deck.draw_pile if zone == "draw" else _ui.game_state.deck.discard_pile
@@ -437,10 +546,14 @@ func _test_hidden_tools() -> void:
 		var equipment: CardInstance = _first_card(1, "remove_attack_limit")
 		assert(equipment != null)
 		assert(_ui.game_state.transfer_player_card(equipment.instance_id, 1, "hand", 2, "equipment"))
+		var judgment: CardInstance = _first_card(1, "block_attack")
+		assert(judgment != null)
+		assert(_ui.game_state.transfer_player_card(judgment.instance_id, 1, "hand", 2, "judgment"))
 		_ui._refresh()
 		_press("Card%d" % tool.instance_id)
 		_press("Seat2")
 		var hand_before: int = _ui.game_state.get_player(1).get_hand_count()
+		var events_before: Array[String] = _ui._events.duplicate()
 		_press("ActionConfirm")
 		assert((_ui.find_child("ChoiceConfirm", true, false) as Button).disabled)
 		var back: Button = _ui.find_child("HiddenCard0", true, false) as Button
@@ -448,14 +561,22 @@ func _test_hidden_tools() -> void:
 		assert(not back.text.contains(victim.definition.display_name))
 		assert(back.tooltip_text.is_empty())
 		var face_up: Button = _ui.find_child("EquipmentCard%d" % equipment.instance_id, true, false) as Button
-		assert(face_up != null and face_up.text.contains(equipment.definition.display_name))
+		assert(face_up != null and (face_up.find_child("CardTitle", true, false) as Label).text == equipment.definition.display_name.to_upper())
+		for zone: String in ["hand", "equipment", "judgment"]:
+			assert(_ui.find_child("ToolZone_" + zone, true, false) != null)
+		assert((_ui.find_child("ToolZone_hand", true, false) as Node).is_ancestor_of(back))
+		assert((_ui.find_child("ToolZone_equipment", true, false) as Node).is_ancestor_of(face_up))
 		assert(not face_up.text.contains("BÀI ÚP"))
 		assert(face_up.tooltip_text == equipment.definition.description)
 		_press("ChoiceCancel")
+		assert(_ui._events == events_before)
 		assert(_ui.game_state.get_player(1).get_hand_count() == hand_before)
 		_press("ActionConfirm")
 		await process_frame
 		await _click("HiddenCard0")
+		assert((_ui.find_child("HiddenCard0", true, false) as Button).position.y == 0.0)
+		assert((_ui.find_child("EquipmentCard%d" % equipment.instance_id, true, false) as Button).modulate.r < 1.0)
+		assert(_ui._events == events_before)
 		assert(_ui.game_state.get_player(2).get_hand_count() == 1)
 		await _click("ChoiceConfirm")
 		assert(_ui.game_state.get_player(2).hand.is_empty())
@@ -464,7 +585,14 @@ func _test_hidden_tools() -> void:
 		assert(next_tool != null)
 		_press("Card%d" % next_tool.instance_id)
 		_press("ActionConfirm")
+		var judgment_back: Button = null
+		for node: Node in _ui.find_child("ToolZone_judgment", true, false).find_children("*", "Button", true, false):
+			judgment_back = node as Button
+		assert(judgment_back != null and judgment_back.text.contains("BÀI ÚP"))
+		judgment_back.pressed.emit()
+		assert(_ui._choice_zone == "judgment" and _ui._choice_selected_card_id == judgment.instance_id)
 		_press("EquipmentCard%d" % equipment.instance_id)
+		assert(_ui._choice_zone == "equipment" and not judgment_back.button_pressed)
 		assert(_ui.combat.get_weapon(2) == equipment)
 		_press("ChoiceConfirm")
 		assert(_ui.combat.get_weapon(2) == null)
@@ -483,11 +611,51 @@ func _test_winner_ui() -> void:
 	assert((_ui.find_child("PhaseLabel", true, false) as Label).text.contains("Human thắng cuộc"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Human thắng cuộc"))
 	assert((_ui.find_child("EndTurn", true, false) as Button).disabled)
-	assert((_ui.find_child("HumanDraw", true, false) as Button).disabled)
+	assert(_ui.find_child("HumanDraw", true, false) == null)
 	assert(not (_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
 	var before_hand: int = _ui.game_state.get_player(1).get_hand_count()
-	_press("HumanDraw")
+	assert(_ui.game_state.draw_card(1) == null)
 	assert(_ui.game_state.get_player(1).get_hand_count() == before_hand)
 	_press("NewTable")
 	assert(not _ui.game_state.match_over and _ui.game_state.winner_id == 0)
 	assert(not (_ui.find_child("EndTurn", true, false) as Button).disabled)
+
+
+func _test_disabled_cards_and_seats() -> void:
+	_press("NewTable")
+	_draw_all_for_human()
+	var dodge: CardInstance = _first_card(1, "block_attack")
+	var heal: CardInstance = _first_card(1, "restore_hp")
+	assert(dodge != null and heal != null)
+	var dodge_button: Button = _ui.find_child("Card%d" % dodge.instance_id, true, false) as Button
+	assert(dodge_button.disabled)
+	assert((_ui.find_child("Card%d" % heal.instance_id, true, false) as Button).disabled)
+	var before_hand: int = _ui.game_state.get_player(1).get_hand_count()
+	await _click("Card%d" % dodge.instance_id)
+	assert(_ui.selected_hand_card_id == 0)
+	assert(_ui.game_state.get_player(1).get_hand_count() == before_hand)
+	assert(_ui.combat.executor.resolver.deal_damage(1, 1))
+	_ui._refresh()
+	assert(not (_ui.find_child("Card%d" % heal.instance_id, true, false) as Button).disabled)
+	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("♥♥♥♡"))
+	_press("EndTurn")
+	assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.DISCARD)
+	assert(not (_ui.find_child("Card%d" % dodge.instance_id, true, false) as Button).disabled)
+	await _click("Card%d" % dodge.instance_id)
+	assert(_ui.selected_hand_card_id == dodge.instance_id)
+	_press("ActionCancel")
+	assert(_ui.game_state.get_player(1).get_hand_count() == before_hand)
+	_press("Seat2")
+	assert(_ui.combat.executor.resolver.deal_damage(2, 5))
+	_ui._refresh()
+	assert(_ui._health_text(_ui.game_state.get_player(2)) == "♡♡♡♡ · -1")
+	assert(_ui._choice_kind == "dying")
+	_press("ChoiceCancel")
+	var eliminated_seat: Button = _ui.find_child("Seat2", true, false) as Button
+	assert(eliminated_seat.disabled and eliminated_seat.text.contains("Đã loại"))
+	assert(_ui.selected_target_id == 0)
+	await _click("Seat2")
+	assert(_ui.selected_target_id == 0)
+	_ui._select_target(2)
+	assert(_ui.selected_target_id == 0)
+	assert(_ui.game_state.validate_state())

@@ -89,6 +89,10 @@ Các quyết định còn thiếu được đánh số G1–G12 trong thiết k�
 - Automated bot-vs-bot simulation and deadlock detection.
 
 ## Stage 5 — Playable PC interface
+- Selection/personal-panel follow-up completed: selected hand/modal cards rise and other cards dim; draft selection/cancellation is absent from the match log. Human information is separate from the Bot table, while manual Bot hands still follow the current turn. No gameplay change; execution evidence is in STATUS.
+- Target-selection follow-up completed: smaller uppercase card faces, labeled tool-card zones and validator-driven target dimming/locking with stale-selection clearing. No new weapon ability or targeting rule was introduced.
+- Compact-log follow-up completed: single-spaced name-only card logs, rank/suit only at the top of each card, and an independent draw/discard/shuffle information panel. Shuffle count instruments existing shuffle calls, including match setup; gameplay unchanged.
+- Latest UI follow-up completed: remove right Debug menu, place Event Log in the top header, use portrait card faces and heart health, disable unusable cards/eliminated seats. Manual Bot turns use the same lower hand and action buttons. Existing gameplay/weapon limits remain unchanged; regression/UI evidence is in STATUS.
 - Hand/deck/discard UI, four seats, HP, role, active phase, action log.
 - Target selection and reaction/rescue prompts.
 - Game setup, end screen, pause/restart.
