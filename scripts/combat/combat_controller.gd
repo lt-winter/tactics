@@ -47,6 +47,22 @@ func get_defense(player_id: int) -> CardInstance:
 	return executor.equipment_system.get_defense(player_id)
 
 
+func use_support_tool(actor_id: int, card_id: int) -> ActionResult:
+	return executor.use_support_tool(actor_id, card_id)
+
+
+func has_pending_support() -> bool:
+	return executor.support_tools.has_pending()
+
+
+func get_pending_support() -> Dictionary:
+	return executor.support_tools.get_pending()
+
+
+func discard_for_support(actor_id: int, card_ids: Array[int]) -> ActionResult:
+	return _resume_after(executor.discard_for_support(actor_id, card_ids))
+
+
 func get_attack_range(player_id: int) -> Dictionary:
 	var context: RuleContext = RuleContext.new(player_id)
 	return executor.validator.rule_engine.get_rule("attack_range", {}, context)

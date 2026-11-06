@@ -15,6 +15,11 @@ var deck: Deck
 var players: Dictionary = {}
 var original_ids: Dictionary = {}
 var _committing: bool = false
+var _last_discard_groups: Dictionary = {}
+
+
+func get_last_discard_groups() -> Dictionary:
+	return _last_discard_groups.duplicate(true)
 
 
 func _init(
@@ -66,6 +71,10 @@ func _get_zone(
 			return player.judgment
 
 	return []
+
+
+func is_transfer_in_progress() -> bool:
+	return _committing
 
 
 func transfer_card(
@@ -124,12 +133,25 @@ func transfer_cards(moves: Array[Dictionary]) -> bool:
 		equipment_touched = equipment_touched or from_zone == EQUIPMENT or to_zone == EQUIPMENT
 	# Publish only after every move succeeds in the shadow state.
 	var discarded_names: PackedStringArray = []
+	var discard_owners: Dictionary = {}
+	for move: Dictionary in moves:
+		if move["to_zone"] == DISCARD:
+			discard_owners[int(move["card_id"])] = int(move["from_player_id"])
+	var discarded_groups: Dictionary = {}
 	if shadows.has("discard:0"):
 		var previous_discard: Array[CardInstance] = originals["discard:0"]
 		var next_discard: Array[CardInstance] = shadows["discard:0"]
 		for card: CardInstance in next_discard:
 			if not previous_discard.has(card):
 				discarded_names.append(card.definition.display_name)
+				var owner: int = int(discard_owners.get(card.instance_id, 0))
+				if not discarded_groups.has(owner):
+					discarded_groups[owner] = PackedStringArray()
+				var names: PackedStringArray = discarded_groups[owner]
+				names.append(card.definition.display_name)
+				discarded_groups[owner] = names
+	if not discarded_names.is_empty():
+		_last_discard_groups = discarded_groups
 	_committing = true
 	for key: String in originals:
 		var zone: Array[CardInstance] = originals[key]

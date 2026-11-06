@@ -66,6 +66,8 @@ func get_transition_block_reason() -> String:
 	if _executor_ref != null:
 		var action_executor: ActionExecutor = _executor_ref.get_ref() as ActionExecutor
 		if action_executor != null:
+			if action_executor.support_tools.has_pending():
+				return "Phải hoàn tất lựa chọn công cụ hỗ trợ trước."
 			if action_executor.has_pending_attack():
 				return "Phải giải quyết phản ứng Tấn công trước."
 			if action_executor.has_pending_aoe():

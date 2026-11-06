@@ -84,5 +84,6 @@ func process_damage(
 
 	return resolver.deal_damage(
 		target_id,
-		context.final_damage
+		context.final_damage,
+		source_id
 	)

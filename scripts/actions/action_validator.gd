@@ -7,6 +7,37 @@ var turn_manager: TurnManager
 var rule_engine: RuleEngine
 
 
+func get_support_effect(actor_id: int, card_id: int) -> Dictionary:
+	var actor: Player = game_state.get_player(actor_id)
+	if actor != null:
+		for card: CardInstance in actor.hand:
+			if card.instance_id == card_id:
+				return SupportToolResolution.get_effect(card.definition)
+	return {}
+
+
+func validate_support_tool(actor_id: int, card_id: int) -> ActionResult:
+	var blocked: String = turn_manager.get_transition_block_reason()
+	if blocked.is_empty():
+		blocked = turn_manager.get_effect_wait_reason()
+	if not blocked.is_empty():
+		return ActionResult.failure(blocked)
+	if game_state.zone_manager.is_transfer_in_progress():
+		return ActionResult.failure("Đang chuyển vùng bài; chưa thể dùng công cụ hỗ trợ.")
+	var actor: Player = turn_manager.get_current_player()
+	if actor == null or actor.player_id != actor_id or not actor.is_alive() or turn_manager.current_phase != TurnManager.Phase.PLAY:
+		return ActionResult.failure("Chỉ dùng công cụ hỗ trợ trong giai đoạn sử dụng bài của mình.")
+	var effect: Dictionary = get_support_effect(actor_id, card_id)
+	if effect.is_empty():
+		return ActionResult.failure("Không sở hữu công cụ hỗ trợ được hỗ trợ hoặc sai tham số.")
+	if effect["effect_id"] == "draw_cards":
+		var parameters: Dictionary = effect["parameters"]
+		var available: int = actor.get_hand_count() - 1 + mini(int(parameters["count"]), game_state.deck.get_draw_count() + game_state.deck.get_discard_count())
+		if available < int(parameters.get("discard_count", 0)):
+			return ActionResult.failure("Không đủ bài khả dụng để hoàn tất số lá bắt buộc bỏ.")
+	return ActionResult.success()
+
+
 func get_aoe_parameters(actor_id: int, card_id: int) -> Dictionary:
 	var actor: Player = game_state.get_player(actor_id)
 	if actor == null:

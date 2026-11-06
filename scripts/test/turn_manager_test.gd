@@ -311,9 +311,12 @@ static func _test_discard_selection() -> void:
 		assert(eliminated.game_state.draw_card(1) != null)
 	assert(eliminated.end_turn(1).valid)
 	assert(eliminated.turn_manager.current_phase == TurnManager.Phase.DISCARD)
+	var death_cards: Array[CardInstance] = eliminated.game_state.get_player(1).hand.duplicate()
 	assert(eliminated.executor.resolver.deal_damage(1, 4))
 	assert(eliminated.executor.dying_manager.begin_dying(1).valid)
 	assert(eliminated.finalize_dying().valid)
 	assert(eliminated.turn_manager.get_current_player().player_id == 2)
-	assert(eliminated.game_state.get_player(1).get_hand_count() == 6)
+	assert(eliminated.game_state.get_player(1).get_hand_count() == 0)
+	for death_card: CardInstance in death_cards:
+		assert(eliminated.game_state.deck.discard_pile.has(death_card))
 	print("[PASS] DISCARD waits for validated choices; no automatic card loss")

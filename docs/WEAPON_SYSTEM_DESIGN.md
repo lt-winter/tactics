@@ -8,6 +8,8 @@ Tài liệu này thiết kế nền tảng cho năm vũ khí theo yêu cầu m�
 
 ## 1. Phạm vi, nguồn đối chiếu và khoảng cách kiến trúc
 
+**Cập nhật đã được duyệt sau thiết kế:** khi bị loại, toàn bộ bài trên tay/trang bị/phán xét chuyển vào chồng bỏ bằng batch của CardZoneManager, modifier gỡ đồng bộ trước khi tiếp tục. Phần cleanup G2 dưới đây đã được giải quyết theo luật này; các policy trigger sau Dying của từng vũ khí vẫn cần đặc tả riêng. Không tự bắt đầu W3–W7.
+
 Đã đọc `AGENTS.md`, `GDD.md`, `ARCHITECTURE.md`, `DEVELOPMENT_PLAN.md`, toàn bộ `DEVELOPMENT_STATUS.md`; source trong `scripts/cards/`, `scripts/rules/`, `scripts/core/`, `scripts/actions/`, `scripts/combat/`, PlayablePrototype và scene F6. Đối chiếu các test Rule/Damage/Dying/Turn/UI liên quan và cách gọi suite trong `main.gd`.
 
 Các đường dẫn source rút gọn trong bảng dưới tính từ `scripts/`. Điểm kiểm chứng chính: [GameState](../scripts/core/game_state.gd), [DamagePipeline](../scripts/combat/damage_pipeline.gd), [ActionExecutor](../scripts/actions/action_executor.gd), [RuleEngine](../scripts/rules/rule_engine.gd), [DistanceCalculator](../scripts/rules/distance_calculator.gd), [PlayablePrototype](../scripts/dev/playable_prototype.gd). Luật hiện tại đối chiếu [GDD](GDD.md), tiến độ thực thi đối chiếu [STATUS](DEVELOPMENT_STATUS.md).

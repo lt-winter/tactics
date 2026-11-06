@@ -15,6 +15,7 @@ var pending_attack: Dictionary = {}
 var dying_manager: DyingManager
 var equipment_system: EquipmentSystem
 var aoe_resolution: AoeResolution
+var support_tools: SupportToolResolution
 
 func _init(
 	state: GameState,
@@ -29,6 +30,7 @@ func _init(
 	dying_manager = DyingManager.new(state)
 	equipment_system = EquipmentSystem.new(state, rules)
 	aoe_resolution = AoeResolution.new(state, turns, damage_pipeline, dying_manager)
+	support_tools = SupportToolResolution.new(state, turns, resolver)
 	turn_manager.bind_combat(self, rules)
 	turn_manager.turn_started.connect(_on_turn_started)
 	game_state.match_finished.connect(_on_match_finished)
@@ -37,6 +39,21 @@ func _init(
 func _on_match_finished(_winner_id: int) -> void:
 	pending_attack.clear()
 	aoe_resolution.clear()
+	support_tools.clear()
+
+
+func use_support_tool(actor_id: int, card_id: int) -> ActionResult:
+	var validation: ActionResult = validator.validate_support_tool(actor_id, card_id)
+	if not validation.valid:
+		return validation
+	for card: CardInstance in game_state.get_player(actor_id).hand:
+		if card.instance_id == card_id:
+			return support_tools.execute(actor_id, card, validator.get_support_effect(actor_id, card_id))
+	return ActionResult.failure("Không sở hữu công cụ hỗ trợ.")
+
+
+func discard_for_support(actor_id: int, card_ids: Array[int]) -> ActionResult:
+	return support_tools.discard_selected(actor_id, card_ids)
 
 
 func use_aoe(actor_id: int, card_id: int) -> ActionResult:
@@ -102,7 +119,7 @@ func use_heal(actor_id: int, card_id: int) -> ActionResult:
 	var amount: int = _get_heal_amount(actor_id, card_id)
 	if not game_state.discard_card(actor_id, card_id):
 		return ActionResult.failure("Không thể tiêu hao lá hồi máu.")
-	if not resolver.restore_hp(actor_id, amount):
+	if not resolver.restore_hp(actor_id, amount, actor_id):
 		var restored: bool = game_state.zone_manager.transfer_card(card_id, "discard", 0, "hand", actor_id)
 		assert(restored)
 		return ActionResult.failure("Không thể hồi máu; đã hoàn trả lá bài.")

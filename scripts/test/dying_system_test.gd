@@ -272,8 +272,8 @@ static func _test_dying_preempts_attack_response() -> void:
 	assert(eliminated.finalize_dying().valid)
 	assert(eliminated.game_state.get_player(2).is_eliminated())
 	assert(not eliminated.has_pending_dying() and not eliminated.has_pending_response())
-	assert(eliminated.game_state.get_player(2).get_hand_count() == 1)
-	assert(eliminated.game_state.deck.get_discard_count() == 1)
+	assert(eliminated.game_state.get_player(2).get_hand_count() == 0)
+	assert(eliminated.game_state.deck.get_discard_count() == 2)
 	assert(combat.game_state.validate_state() and eliminated.game_state.validate_state())
 	print("[PASS] Dying preempts pending Dodge/damage/phase; rescue resumes and elimination cancels stale attack")
 

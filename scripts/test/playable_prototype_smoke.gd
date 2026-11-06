@@ -39,7 +39,8 @@ func _run() -> void:
 	assert(_ui.find_child("DebugActor", true, false) == null)
 	assert(_ui.find_child("HumanDraw", true, false) == null)
 	var log_panel: Control = _ui.find_child("EventLogPanel", true, false) as Control
-	assert(log_panel.get_global_rect().end.y < bot_two_seat.get_global_rect().position.y)
+	assert(log_panel.get_global_rect().position.x >= bot_table.get_global_rect().end.x)
+	assert(log_panel.get_global_rect().end.y <= human_panel.get_global_rect().position.y)
 	assert(human_seat.text.contains("♥♥♥♥") and not human_seat.text.contains("HP "))
 	var visible_card: CardInstance = null
 	for card: CardInstance in _ui.game_state.get_player(1).hand:
@@ -68,7 +69,7 @@ func _run() -> void:
 	assert(_ui._events == events_before_selection)
 	assert((_ui.find_child("Card%d" % visible_card.instance_id, true, false) as Button).position.y == 0.0)
 	var deck_panel: Control = _ui.find_child("DeckInfoPanel", true, false) as Control
-	assert(deck_panel.get_global_rect().position.y > human_seat.get_global_rect().end.y)
+	assert(deck_panel.get_global_rect().end.y <= log_panel.get_global_rect().position.y)
 	var deck_label: Label = _ui.find_child("DeckInfoLabel", true, false) as Label
 	assert(deck_label.text.contains("Chồng rút: %d" % _ui.game_state.deck.get_draw_count()))
 	assert(deck_label.text.contains("Xào: 1 lần"))
@@ -401,8 +402,8 @@ func _test_weapon_equip() -> void:
 	assert(_ui.game_state.deck.discard_pile.has(crossbow))
 	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Súng trường · Tầm 5"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("chưa được triển khai"))
-	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Vào chồng bài bỏ: Nỏ thần"))
-	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("Vào chồng bài bỏ: Tấn công"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Nỏ thần"))
+	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Tấn công"))
 	_select_human_attack()
 	_press("Seat2")
 	_press("ActionConfirm")

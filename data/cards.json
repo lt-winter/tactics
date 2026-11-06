@@ -211,6 +211,37 @@
 		  }
 		}
 	  ]
+	},
+	{
+	  "id": "draw_2",
+	  "name": "Rút 2 lá",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Trong giai đoạn sử dụng bài của mình, rút 2 lá.",
+	  "effects": [{ "effect_id": "draw_cards", "parameters": { "count": 2 } }]
+	},
+	{
+	  "id": "exchange",
+	  "name": "Trao đổi",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Trong giai đoạn sử dụng bài của mình, rút 3 lá rồi chọn bỏ 2 lá trên tay.",
+	  "effects": [
+		{
+		  "effect_id": "draw_cards",
+		  "parameters": { "count": 3, "discard_count": 2 }
+		}
+	  ]
+	},
+	{
+	  "id": "saloon",
+	  "name": "Cứu trợ",
+	  "category": "tool",
+	  "subcategory": "instant",
+	  "description": "Hồi 1 máu cho tất cả người chơi.",
+	  "effects": [
+		{ "effect_id": "heal_all_players", "parameters": { "amount": 1 } }
+	  ]
 	}
   ]
 }

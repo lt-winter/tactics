@@ -3,6 +3,27 @@ class_name GameState
 extends RefCounted
 
 signal match_finished(winner_id: int)
+signal damage_applied(source_id: int, target_id: int, amount: int)
+signal healing_applied(source_id: int, target_id: int, amount: int)
+signal player_eliminated(player_id: int, killer_id: int)
+signal kill_reward_drawn(killer_id: int, victim_id: int, count: int)
+
+var _lethal_sources: Dictionary = {}
+
+
+func record_damage(source_id: int, target_id: int, amount: int) -> void:
+	var target: Player = get_player(target_id)
+	if target != null and target.is_dying():
+		_lethal_sources[target_id] = source_id
+	damage_applied.emit(source_id, target_id, amount)
+
+
+func get_lethal_source(target_id: int) -> int:
+	return int(_lethal_sources.get(target_id, 0))
+
+
+func clear_lethal_source(target_id: int) -> void:
+	_lethal_sources.erase(target_id)
 
 var players: Array[Player] = []
 var deck: Deck

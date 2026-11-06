@@ -98,6 +98,24 @@
 		{ "suit": 3, "rank": 3 },
 		{ "suit": 3, "rank": 7 }
 	  ]
+	},
+	{
+	  "card_id": "draw_2",
+	  "copies": [
+		{ "suit": 1, "rank": 7 },
+		{ "suit": 1, "rank": 8 }
+	  ]
+	},
+	{
+	  "card_id": "exchange",
+	  "copies": [
+		{ "suit": 1, "rank": 11 },
+		{ "suit": 2, "rank": 4 }
+	  ]
+	},
+	{
+	  "card_id": "saloon",
+	  "copies": [{ "suit": 1, "rank": 1 }]
 	}
   ]
 }

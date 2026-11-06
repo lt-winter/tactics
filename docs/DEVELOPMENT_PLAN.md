@@ -92,6 +92,8 @@ Các quyết định còn thiếu được đánh số G1–G12 trong thiết k�
 - Automated bot-vs-bot simulation and deadlock detection.
 
 ## Stage 5 — Playable PC interface
+- Screenshot-guided layout completed: left table/hand, right log and lower-right P1 panel, last played card centered on the table, concise actor/card/target log without `→ OK`. Added TablePresentation UI smoke across 2–6 seats; this is presentation only and introduces no new zone/rule.
+- Elimination/log/input follow-up implemented: all dead-player zones to discard with modifier detach, source-attributed temporary 2-card kill reward, actor/target/name-aware event logs, centered controls above the active hand and repeated-double-click draft deselection. Does not implement weapon active triggers, roles or AI.
 - Setup/input/defense follow-up implemented: initial/new-match menu for 2–6 named P1…Pn, adaptive seats, cancel preserving the old session, double-click through existing confirms, and defensive-slot metadata/query/UI foundation only. Added defense regression and menu/input smoke. Armor effects, armor use/replacement rules, bots and expanded role allocation remain unimplemented; no deck changes are authorized by this work.
 - Selection/personal-panel follow-up completed: selected hand/modal cards rise and other cards dim; draft selection/cancellation is absent from the match log. Human information is separate from the Bot table, while manual Bot hands still follow the current turn. No gameplay change; execution evidence is in STATUS.
 - Target-selection follow-up completed: smaller uppercase card faces, labeled tool-card zones and validator-driven target dimming/locking with stale-selection clearing. No new weapon ability or targeting rule was introduced.
