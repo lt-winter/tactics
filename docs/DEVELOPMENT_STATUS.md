@@ -5,6 +5,7 @@
 
 ## Current snapshot
 - Stage 0.1 — Dying integration is implemented and its scoped regression tests pass.
+- Playable Prototype UI v0.1 is available at `res://scenes/dev/playable_prototype.tscn` (open this scene and press F6). It is a manual four-seat game surface, with no AI or new gameplay rules. The original main scene/project settings and 13 regression suites are unchanged.
 - Latest Card/Deck regression repair: **13/13 suites passed** with GDScript warnings-as-errors enabled in the temporary test project. The previous 11/13 Stage 0.1 result is retained below as historical evidence.
 - Stage 0.2 / Combat v0.5 has **not** been started. Wait for explicit approval before proceeding.
 - `AGENTS.md` and all four handoff documents are present locally. `ARCHITECTURE.md` retains the earlier GitHub snapshot; its unreachable-code, pending-dying attack, distance, and missing-DyingSystemTest findings are resolved in this workspace as recorded below.
@@ -31,9 +32,71 @@ Turn-order removal is deliberately **not** part of Stage 0.1 acceptance: DEVELOP
 - Attack validation, response windows, Dodge, damage/healing primitives, and DamagePipeline modifier registry.
 - Player ALIVE/DYING/ELIMINATED states and DyingManager simulated rescue/finalization.
 
+## Playable Prototype UI v0.1 — 2026-11-06
+
+### Files and scope
+- Added `scenes/dev/playable_prototype.tscn`: independent Control root, runnable with F6; no change to default startup.
+- Added `scripts/dev/playable_prototype.gd` and its Godot UID: builds the Control-node layout at runtime, presents state, and connects mouse/button input to existing engine APIs.
+- Added `scripts/test/playable_prototype_smoke.gd` and its UID: a separate SceneTree smoke script, not a replacement for any of the 13 regression suites.
+- Updated this status document, preserving earlier records and pre-existing edits.
+- No production engine, card JSON, `main.gd`, existing test, or `project.godot` change. No commit or push. Stop after Prototype v0.1.
+
+### Playing the scene
+1. Open `scenes/dev/playable_prototype.tscn` in Godot and press **F6**. The scene uses a 1280x720 canvas with aspect-preserving scaling; no image assets are required.
+2. The dev table starts with four players at 4 HP and the current standard 12-card deck. No opening deal is invented. Press **Chuyển phase** three times to enter PLAY; the existing DRAW phase draws 2 cards for Human. Explicit **Debug: Rút 1** controls are also available.
+3. Click a Human card and a seat, then **Tấn công**. Engine errors (wrong phase/turn/range/limit/ownership) are shown in the event log. Cards without an action API display an unsupported message and do not execute effects.
+4. When Human is targeted, select a Dodge card and press **Né bằng bài đã chọn**, or choose **Không Né**. For a targeted Bot, select that Bot in the Debug panel, select its Dodge card if desired, and use **Bot: Né / Không Né**.
+5. To control a Bot's turn, advance phases normally, select that Bot and an Attack card in Debug, click a target seat, then press **Bot: Attack**. Bots never decide or act automatically. Their cards are visible only in the explicitly labeled Debug selector.
+6. At DYING, the victim becomes the selected target. Human or a selected Bot can request **Cứu +1 · mô phỏng** through the existing rescue API; **Finalize Dying** invokes finalization. Rescue does not consume cards because payment/order/self-rescue rules are still OPEN.
+7. **Bàn mới** constructs a fresh dev table. Pending attacks/dying are not edited or cleared directly; replacing the dev session is separate from changing its gameplay state.
+
+### API boundary and limits
+- Attacks, responses, phase changes, rescue and finalization call `CombatController` APIs. Debug draws call `GameState.draw_card()`. No UI writes to HP, life state, pending attack, turn counters, or phase.
+- Debug draws are blocked during pending response/dying and for non-ALIVE players. All normal phase progression goes through the existing controller guards.
+- Seats show HP/max HP, ALIVE/DYING/ELIMINATED, hand counts, current turn, and selected target. The header shows phase/turn; the center shows pending response/dying and draw/discard counts. The event log retains the latest 100 entries.
+- Healing-card use, Discard/Steal actions, opening deal, full JUDGMENT/DISCARD behavior, roles/victory, and AI are unavailable. The UI explains these limits instead of adding mechanics.
+- Stage 0.2 remains unimplemented: an ELIMINATED seat may still receive a turn. The prototype displays this limitation and permits manual phase advance or a fresh table; it does not silently skip turns or implement victory logic.
+
+### Validation
+- Godot `4.7.2.stable.official.ed1daf0bf`; warnings-as-errors enabled only in a fresh temporary copy. Final UI smoke log has its completion marker and no SCRIPT ERROR or GDScript warning.
+- UI smoke covers actual mouse events for Human card/target selection, Bot selector changes, unsupported-card feedback, invalid range, Human/Bot Attack, Human/Bot Dodge, no-Dodge, phase locks, lethal damage, rescue, finalization, restart and card conservation. Fixture preparation uses existing card-transfer APIs; no direct HP/phase/window mutation.
+- **13/13 existing regression suites PASS**, with no script warnings/errors or load failures. Suites were checked by their own completion output, not process exit code alone. Existing test files were not changed.
+- Rendered the scene using the desktop OpenGL compatibility renderer, saved and visually inspected its 1280x720 screenshot. Table seats, scrollable cards, action buttons and sidebar fit within the canvas.
+- `git diff --check` passed. Sandbox certificate/editor-settings/shader-cache access diagnostics are environment limitations; they are distinct from script compilation/test results.
+
+Exact validation commands (fresh temporary copy, with warnings-as-errors set in its copied `project.godot`):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$prototypePath = 'C:/Users/Admin/AppData/Local/Temp/tactics-prototype-3b46643394594523b9921a203bb19bdb'
+& $godotExecutable --headless --path $prototypePath --editor --import --quit --log-file (Join-Path $prototypePath 'import.log')
+& $godotExecutable --headless --path $prototypePath --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600 --log-file (Join-Path $prototypePath 'ui-smoke.log')
+& $godotExecutable --headless --path $prototypePath --script res://regression_runner.gd --log-file (Join-Path $prototypePath 'regression.log')
+& $godotExecutable --path $prototypePath --script res://capture.gd --quit-after 600 --log-file (Join-Path $prototypePath 'capture.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The temporary regression runner discovers all `scripts/test/*_test.gd` and calls their static `run_all()` methods as documented below. `capture.gd` instantiates the prototype, advances to PLAY through UI signals, draws four additional Human cards through the Debug control, waits for a rendered frame and saves `prototype-preview.png` under the temporary project. Both helper scripts stay outside the repository. The permanent UI smoke can also run with `godot --headless --path . --script res://scripts/test/playable_prototype_smoke.gd --quit-after 600` after normal editor import; inspect its explicit completion marker and errors.
+
 ## Latest verification — 2026-11-06: Card/Deck test API migration
 
 Only `scripts/test/card_zone_test.gd`, `scripts/test/deck_test.gd`, and this status document changed in this task. No production APIs, gameplay rules, card data, Combat code, or TurnManager behavior changed.
+
+### Follow-up verification of the current workspace
+
+The repeated Card/Deck repair request was checked against the current files: both API migrations were already present, so no additional code changes were needed. A fresh temporary copy was imported and all 13 suites were run again with Godot `4.7.2.stable.official.ed1daf0bf` and warnings-as-errors enabled. **13/13 PASS**, including CardZoneTest and DeckTest, with no SCRIPT ERROR, suite load failure, or GDScript warning. Each suite's completion output was inspected. Only this status document changed in the follow-up; Stage 0.2, gameplay, and public APIs remain untouched. No commit or push was performed.
+
+Exact follow-up commands (same temporary-copy setup and runner as the historical Stage 0.1 runner reproduced below, named `recheck_runner.gd`):
+
+```powershell
+$godotExecutable = 'E:/Projects/Godot/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe'
+$recheckPath = 'C:/Users/Admin/AppData/Local/Temp/tactics-recheck-cf022aa4cc1c4b8983cc2f11d268f830'
+& $godotExecutable --headless --path $recheckPath --editor --import --quit --log-file (Join-Path $recheckPath 'import.log')
+& $godotExecutable --headless --path $recheckPath --script res://recheck_runner.gd --log-file (Join-Path $recheckPath 'regression.log')
+git -c safe.directory=E:/Projects/Godot/tactics diff --check
+```
+
+The runner asserted and printed `WARNINGS_AS_ERRORS=true`. The same sandbox certificate-store and global-editor-settings diagnostics occurred; they are environment diagnostics, not script test failures. Workspace `project.godot` was not modified.
 
 ### Reproduced root causes
 
@@ -153,7 +216,7 @@ The sandbox also reported root-certificate-store access errors and could not sav
 - **Stage 0.3:** centralize lethal-damage notification. Direct DamagePipeline/EffectResolver damage outside the attack-response path does not automatically register pending dying. Nested lethal events need an explicit contract.
 - **Resolved test debt:** the approved CardZoneTest/DeckTest migration above now passes against existing production APIs; obsolete APIs were not restored.
 - **Simulation only:** rescue payment, order, pass/self-rescue rules, and real healing-card use are OPEN in GDD. Existing rescue behavior was preserved.
-- **Later milestones:** role/victory lifecycle, initial deal, hand-limit discard, judgment, equipment/tool actions, approved characters, bots, and playable UI.
+- **Later milestones:** role/victory lifecycle, initial deal, hand-limit discard, judgment, equipment/tool actions, approved characters, bots, and complete MVP UI. The manual Prototype v0.1 above is available separately.
 - Workspace `project.godot` still has no default main scene or warnings-as-errors setting. The explicit scene/script commands above were used; most optional test calls in `main.gd` remain commented out.
 
 ## Change log
