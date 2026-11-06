@@ -1,0 +1,7 @@
+{
+  "rules": {
+	"attack_limit_per_turn": 1,
+	"attack_range": 1,
+	"hand_limit": "current_hp"
+  }
+}
