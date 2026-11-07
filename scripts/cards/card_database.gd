@@ -176,6 +176,10 @@ func _validate_card(card: Variant, location: String) -> bool:
 			if card["category"] != "tool" or card["effects"].size() != 1 or not AoeResolution.valid_parameters(params):
 				errors.append(effect_path + " có cấu hình AOE không được hỗ trợ.")
 				valid = false
+		if ArmorEffectRegistry.HOOKS.has(effect.get("effect_id")):
+			if card["category"] != "equipment" or card.get("equipment_slot") != "armor" or card["effects"].size() != 1 or not ArmorEffectRegistry.valid_effect(effect):
+				errors.append(effect_path + " có cấu hình trang bị phòng ngự không hợp lệ.")
+				valid = false
 		if effect.get("effect_id") in ["draw_cards", "heal_all_players"]:
 			if card["category"] != "tool" or card["effects"].size() != 1 or not SupportToolResolution.valid_effect(effect):
 				errors.append(effect_path + " có cấu hình công cụ hỗ trợ không hợp lệ.")

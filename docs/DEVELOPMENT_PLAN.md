@@ -2,6 +2,13 @@
 
 **Principle:** incremental, tested milestones. No milestone is complete merely because its files exist. Progress is recorded in `DEVELOPMENT_STATUS.md`.
 
+## Latest requested follow-up — 2026-11-07
+- Armor System v0.1 completed: own-PLAY armor equip/atomic replacement; effect registry; per-target Black Shield/optional Barrel; Helmet cap and prepared-damage Chainmail; guarded continuation/UI and regression coverage. Designer-approved Barrel draw->discard/normal reshuffle/empty-pile skip policy is in GDD. No armor copies were added to standard.json; designer must separately choose quantities/suits/ranks to make them drawable. Test evidence is in the latest STATUS entry. General delayed judgment/skills/recursive trigger frameworks remain outside this milestone.
+- Completed main menu (Chơi / Danh mục bài), data-driven read-only catalog and existing 2–6-player setup navigation. F5 now starts the menu; prototype F6 is retained.
+- Completed Exchange discarding exactly two owned hand/equipment cards, zone-grouped picker, modifier detach, atomic validation and updated description. Standard deck untouched.
+- Regression gate: 17 suites and seven UI smoke scripts, including new main_menu_smoke.gd; actual execution details are in STATUS.
+- Active weapons completed after designer decisions: Pistol seat-cycle ordering, Slingshot source exclusion/retained committed cost, Knife before reduction/prevention, rescued-primary continuation/eliminated-primary skip, immediate invalidation of uncommitted effects on weapon loss. AttackContext/AttackResolution add bounded resolution, damage-result evidence and manual decisions for all four active weapons; existing range/Crossbow remain. See GDD/ARCHITECTURE and latest STATUS for implementation/tests. The original generic nested stack/arbitrary trigger framework remains future work; this focused implementation does not claim that framework is complete.
+
 ## Stage 0 — Stabilize existing Combat v0.4 (highest priority)
 **0.1 Dying integration fix**
 - Remove unreachable Dying Window logic from `ActionExecutor.respond_to_attack`.

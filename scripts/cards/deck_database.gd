@@ -160,7 +160,7 @@ func _parse_suit_name(value: Variant) -> String:
 	var number: float = float(value)
 	if not is_finite(number) or number != floor(number):
 		return ""
-	if number < CardInstance.Suit.SPADES or number > CardInstance.Suit.CLUBS:
+	if number < CardInstance.Suit.HEARTS or number > CardInstance.Suit.SPADES:
 		return ""
 	return CardInstance.SUIT_NAMES[int(number)]
 

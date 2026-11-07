@@ -6,11 +6,19 @@ extends RefCounted
 static func calculate(
 	players: Array[Player],
 	from_player_id: int,
-	to_player_id: int
+	to_player_id: int,
+	seat_order: Array[int] = []
 ) -> int:
 	var seated_players: Array[Player] = []
 
-	for player: Player in players:
+	var ordered_players: Array[Player] = players
+	if not seat_order.is_empty():
+		ordered_players = []
+		for player_id: int in seat_order:
+			for candidate: Player in players:
+				if candidate.player_id == player_id:
+					ordered_players.append(candidate)
+	for player: Player in ordered_players:
 		if not player.is_eliminated():
 			seated_players.append(player)
 

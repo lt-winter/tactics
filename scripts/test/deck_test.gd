@@ -51,9 +51,11 @@ static func run_all() -> void:
 	var players: Array[Player] = [player]
 	var game: GameState = GameState.new(cards, players)
 	var deck: Deck = game.deck
+	assert(deck.reshuffle_count == 0)
 	deck.rng.seed = 12345
 	deck.shuffle()
 	assert(deck.shuffle_count == 2)
+	assert(deck.reshuffle_count == 0)
 
 	assert(deck.get_draw_count() == total)
 	assert(deck.get_discard_count() == 0)
@@ -105,6 +107,7 @@ static func run_all() -> void:
 	# 6. Tái tạo chồng rút
 	var recycled_card: CardInstance = game.draw_card(player.player_id)
 	assert(deck.shuffle_count == 3)
+	assert(deck.reshuffle_count == 1)
 
 	assert(recycled_card != null)
 	assert(deck.get_draw_count() == total - 1)
@@ -135,18 +138,22 @@ static func run_all() -> void:
 
 static func _test_suit_formats(card_db: CardDatabase) -> void:
 	var database: DeckDatabase = DeckDatabase.new(card_db)
-	var valid_suits: Array[Variant] = [0, 1.0, 2, 3, "spades", "hearts", "diamonds", "clubs"]
+	var valid_suits: Array[Variant] = [0, 1.0, 2, 3, "hearts", "diamonds", "clubs", "spades"]
 	assert(_load_suit_fixture(database, valid_suits))
 	var cards: Array[CardInstance] = database.create_instances()
 	assert(cards.size() == 8)
+	var expected_names: Array[String] = ["hearts", "diamonds", "clubs", "spades"]
+	var expected_symbols: Array[String] = ["♥", "♦", "♣", "♠"]
 	for index: int in range(cards.size()):
 		assert(int(cards[index].suit) == index % 4)
 		assert(cards[index].rank == 7)
-		assert(cards[index].get_suit_name() == CardInstance.SUIT_NAMES[index % 4])
-		assert(cards[index].is_red() == (index % 4 in [1, 2]))
+		assert(cards[index].get_suit_name() == expected_names[index % 4])
+		assert(CardInstance.SUIT_SYMBOLS[cards[index].suit] == expected_symbols[index % 4])
+		assert(cards[index].is_red() == (index % 4 in [0, 1]))
+		assert(cards[index].is_black() == (index % 4 in [2, 3]))
 	# Normalized entries retain the existing string-based public data format.
-	assert(database.entries[0]["suit"] == "spades")
-	assert(database.entries[1]["suit"] == "hearts")
+	assert(database.entries[0]["suit"] == "hearts")
+	assert(database.entries[1]["suit"] == "diamonds")
 	var invalid_suits: Array[Variant] = [-1, 4, 0.5, true, false, null, "1", "joker", {}, []]
 	for invalid: Variant in invalid_suits:
 		var suit_values: Array[Variant] = [0, invalid]

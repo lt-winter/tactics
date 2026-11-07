@@ -3,10 +3,10 @@ class_name CardInstance
 extends RefCounted
 
 enum Suit {
-	SPADES,
-	HEARTS,
-	DIAMONDS,
-	CLUBS
+	HEARTS = 0,
+	DIAMONDS = 1,
+	CLUBS = 2,
+	SPADES = 3
 }
 
 const SUIT_NAMES := {
@@ -44,8 +44,8 @@ func _init(
 ) -> void:
 	assert(card_definition != null)
 	assert(card_rank >= 1 and card_rank <= 13)
-	assert(card_suit >= Suit.SPADES)
-	assert(card_suit <= Suit.CLUBS)
+	assert(card_suit >= Suit.HEARTS)
+	assert(card_suit <= Suit.SPADES)
 
 	instance_id = new_id
 	definition = card_definition

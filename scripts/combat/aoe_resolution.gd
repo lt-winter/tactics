@@ -8,6 +8,7 @@ var _pipeline: DamagePipeline
 var _dying: DyingManager
 var _pending: Dictionary = {}
 var _resolving: bool = false
+var _damage_result: Dictionary = {}
 
 
 func _init(state: GameState, turns: TurnManager, pipeline: DamagePipeline, dying: DyingManager) -> void:
@@ -37,6 +38,7 @@ func has_pending() -> bool:
 
 func clear() -> void:
 	_pending.clear()
+	_damage_result = {}
 
 
 func get_pending() -> Dictionary:
@@ -74,7 +76,7 @@ func begin(actor_id: int, card: CardInstance, parameters: Dictionary) -> ActionR
 
 
 func resume() -> void:
-	if _resolving or not has_pending():
+	if _resolving or _pipeline.is_busy() or not has_pending():
 		return
 	if _state.match_over:
 		clear()
@@ -82,6 +84,11 @@ func resume() -> void:
 	_dying.ensure_pending_dying()
 	if _dying.has_pending_dying():
 		return
+	if not _damage_result.is_empty():
+		if bool(_damage_result.get("pending", false)):
+			return
+		_pending["index"] = int(_pending["index"]) + 1
+		_damage_result = {}
 	var targets: Array[int] = _pending["targets"]
 	# Cursor only moves forward; at most one pass through the captured seat list.
 	while int(_pending["index"]) < targets.size():
@@ -96,7 +103,7 @@ func resume() -> void:
 
 func get_response_cards(target_id: int) -> Array[CardInstance]:
 	var result: Array[CardInstance] = []
-	if not has_pending() or _resolving or _state.match_over or target_id != int(_pending["target_id"]):
+	if not has_pending() or _pipeline.is_busy() or not _damage_result.is_empty() or _resolving or _state.match_over or target_id != int(_pending["target_id"]):
 		return result
 	if not _turns.get_dying_block_reason().is_empty():
 		return result
@@ -110,7 +117,7 @@ func get_response_cards(target_id: int) -> Array[CardInstance]:
 
 
 func respond(target_id: int, response_card_id: int = 0) -> ActionResult:
-	if _resolving or _state.match_over:
+	if _resolving or _pipeline.is_busy() or _state.match_over:
 		return ActionResult.failure("Không thể phản ứng AOE lúc này.")
 	var blocked: String = _turns.get_dying_block_reason()
 	if not blocked.is_empty():
@@ -131,10 +138,15 @@ func respond(target_id: int, response_card_id: int = 0) -> ActionResult:
 	if response_card_id != 0:
 		applied = _state.discard_card(target_id, response_card_id)
 	else:
-		applied = _pipeline.process_damage(int(_pending["actor_id"]), target_id, int(_pending["damage"]), DamageContext.SourceKind.AOE_TOOL)
+		_damage_result = _pipeline.process_damage_result(int(_pending["actor_id"]), target_id, int(_pending["damage"]), DamageContext.SourceKind.AOE_TOOL)
+		applied = bool(_damage_result["processed"])
 	_resolving = false
 	if not applied:
+		_damage_result = {}
 		return ActionResult.failure("Không thể xử lý phản ứng AOE; giữ nguyên mục tiêu.")
+	if bool(_damage_result.get("pending", false)):
+		return ActionResult.success()
+	_damage_result = {}
 	if has_pending():
 		# Save continuation before Dying; never damage the same target on resume.
 		_pending["index"] = int(_pending["index"]) + 1

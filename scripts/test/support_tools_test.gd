@@ -4,11 +4,55 @@ extends RefCounted
 
 static func run_all() -> void:
 	_test_draw_and_exchange()
+	_test_exchange_can_discard_equipment()
 	_test_reshuffle_and_exhaustion()
 	_test_saloon()
 	_test_restrictions()
 	_test_schema_and_reentry()
 	print("=== ALL SUPPORT TOOLS TESTS PASSED ===")
+
+
+static func _test_exchange_can_discard_equipment() -> void:
+	var combat: CombatController = AoeSystemTest.setup()
+	var exchange: CardInstance = _give(combat, 1, "exchange")
+	var weapon: CardInstance = _give(combat, 1, "crossbow")
+	assert(combat.equip_weapon(1, weapon.instance_id).valid)
+	assert(combat.get_weapon(1) == weapon)
+	assert(combat.use_support_tool(1, exchange.instance_id).valid)
+	assert(combat.has_pending_support())
+	var pending: Dictionary = combat.get_pending_support()
+	assert(pending["discard_zones"].has("equipment"))
+	var hand_card: CardInstance = combat.game_state.get_player(1).hand[0]
+	var foreign: CardInstance = _give(combat, 2, "rifle")
+	var judgment: CardInstance = _give(combat, 1, "dodge")
+	assert(combat.game_state.zone_manager.transfer_card(judgment.instance_id, "hand", 1, "judgment", 1))
+	assert(not combat.discard_for_support(1, [weapon.instance_id, weapon.instance_id]).valid)
+	assert(not combat.discard_for_support(1, [weapon.instance_id, foreign.instance_id]).valid)
+	assert(not combat.discard_for_support(1, [weapon.instance_id, judgment.instance_id]).valid)
+	assert(combat.get_weapon(1) == weapon and combat.game_state.get_player(1).hand.has(hand_card))
+	pending["discard_zones"].clear()
+	assert(combat.get_pending_support()["discard_zones"] == ["hand", "equipment"])
+	assert(combat.discard_for_support(1, [weapon.instance_id, hand_card.instance_id]).valid)
+	assert(combat.get_weapon(1) == null)
+	var limit: Dictionary = combat.executor.validator.rule_engine.get_rule("attack_limit_per_turn", {}, RuleContext.new(1))
+	assert(not limit["unlimited"] and int(limit["value"]) == 1)
+	assert(combat.game_state.deck.discard_pile.count(weapon) == 1)
+	assert(combat.game_state.validate_state())
+	assert(not combat.discard_for_support(1, [weapon.instance_id, hand_card.instance_id]).valid)
+	# Preflight must count equipment when the draw pile cannot supply two cards.
+	combat = _small("exchange", 2)
+	# Use owned hand/equipment fixtures without creating any additional instance.
+	var database: CardDatabase = CardDatabase.new()
+	assert(database.load_from_file("res://data/cards.json"))
+	for remaining: CardInstance in combat.game_state.deck.draw_pile:
+		remaining.definition = database.get_definition("crossbow" if remaining.instance_id == 2 else "dodge")
+	assert(combat.game_state.zone_manager.transfer_card(2, "draw", 0, "hand", 1))
+	assert(combat.game_state.zone_manager.transfer_card(3, "draw", 0, "hand", 1))
+	assert(combat.equip_weapon(1, 2).valid)
+	assert(combat.use_support_tool(1, 1).valid)
+	assert(combat.discard_for_support(1, [2, 3]).valid)
+	assert(combat.game_state.validate_state())
+	print("[PASS] Exchange hand/equipment, atomic rejection, foreign/judgment/duplicate/replay guards and depleted-deck preflight")
 
 
 static func _give(combat: CombatController, owner: int, definition_id: String) -> CardInstance:
@@ -190,6 +234,8 @@ static func _test_restrictions() -> void:
 
 
 static func _test_schema_and_reentry() -> void:
+	for zones: Variant in [["hand", "hand"], ["judgment"], [], "equipment", [1]]:
+		assert(not SupportToolResolution.valid_effect({"effect_id": "draw_cards", "parameters": {"count": 3, "discard_count": 2, "discard_zones": zones}}))
 	for bad: Variant in [0, -1, 1.5, true, "2", null, INF, NAN]:
 		assert(not SupportToolResolution.valid_effect({"effect_id": "draw_cards", "parameters": {"count": bad}}))
 	assert(not SupportToolResolution.valid_effect({"effect_id": "heal_all_players", "parameters": {"amount": 2}}))

@@ -28,7 +28,8 @@ func _run() -> void:
 			var player: Player = _ui.game_state.get_player(player_id)
 			assert(player.display_name == "P%d" % player_id)
 			assert(player.get_hand_count() == (6 if player_id == 1 else 4))
-			assert((_ui.find_child("Seat%d" % player_id, true, false) as Button).text.contains("Phòng ngự: —"))
+			var seat: Button = _ui.find_child("Seat%d" % player_id, true, false) as Button
+			assert(not seat.text.contains("Phòng ngự:") and not seat.text.contains("Tầm"))
 		await process_frame
 		for first: int in range(1, _ui._seats.size()):
 			for second: int in range(first + 1, _ui._seats.size()):
@@ -122,7 +123,7 @@ func _test_double_click() -> void:
 	# Opening/cancelling setup must retain the response and spent Attack.
 	(_ui.find_child("NewTable", true, false) as Button).pressed.emit()
 	await _click("CancelMatchSetup")
-	assert(_ui._choice_kind == "response" and _ui._choice_overlay.visible)
+	assert(_ui._choice_kind == "response" and _ui.is_choice_visible())
 	await _double_click("DodgeCard%d" % dodge.instance_id)
 	assert(not _ui.combat.has_pending_response() and _ui.game_state.get_player(2).hp == 4)
 	assert(_ui.game_state.deck.discard_pile.has(dodge))
@@ -156,6 +157,9 @@ func _test_double_click() -> void:
 	var before_discard: int = _ui.game_state.get_player(1).get_hand_count()
 	dodge = _card("block_attack")
 	await _double_click("Card%d" % dodge.instance_id)
+	assert(_ui.game_state.get_player(1).get_hand_count() == before_discard)
+	assert(_ui._turn_discard_ids == [dodge.instance_id])
+	await _click("ActionConfirm")
 	assert(_ui.game_state.get_player(1).get_hand_count() == before_discard - 1)
 	assert(_ui.game_state.validate_state())
 

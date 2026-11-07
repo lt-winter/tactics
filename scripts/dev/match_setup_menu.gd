@@ -27,7 +27,7 @@ func _ready() -> void:
 	panel.add_child(column)
 	var title: Label = Label.new()
 	title.text = "TACTICS / VÁN MỚI"
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 26)
 	column.add_child(title)
 	var info: Label = Label.new()
 	info.text = "Chọn 2–6 người chơi.\nP1 là bạn; P2…Pn điều khiển thủ công."

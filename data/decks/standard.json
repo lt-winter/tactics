@@ -5,18 +5,23 @@
 	{
 	  "card_id": "attack",
 	  "copies": [
-		{ "suit": 0, "rank": 7 },
-		{ "suit": 0, "rank": 8 },
-		{ "suit": 0, "rank": 9 },
 		{ "suit": 0, "rank": 10 },
+		{ "suit": 0, "rank": 12 },
+		{ "suit": 1, "rank": 10 },
+		{ "suit": 1, "rank": 11 },
 		{ "suit": 1, "rank": 12 },
+		{ "suit": 2, "rank": 2 },
+		{ "suit": 2, "rank": 3 },
+		{ "suit": 2, "rank": 4 },
+		{ "suit": 2, "rank": 5 },
+		{ "suit": 2, "rank": 8 },
+		{ "suit": 2, "rank": 9 },
 		{ "suit": 2, "rank": 10 },
 		{ "suit": 2, "rank": 11 },
-		{ "suit": 2, "rank": 12 },
-		{ "suit": 3, "rank": 2 },
-		{ "suit": 3, "rank": 3 },
-		{ "suit": 3, "rank": 4 },
+		{ "suit": 2, "rank": 11 },
 		{ "suit": 3, "rank": 5 },
+		{ "suit": 3, "rank": 7 },
+		{ "suit": 3, "rank": 8 },
 		{ "suit": 3, "rank": 8 },
 		{ "suit": 3, "rank": 9 },
 		{ "suit": 3, "rank": 10 },
@@ -26,96 +31,97 @@
 	{
 	  "card_id": "dodge",
 	  "copies": [
+		{ "suit": 0, "rank": 2 },
+		{ "suit": 0, "rank": 11 },
+		{ "suit": 0, "rank": 13 },
 		{ "suit": 1, "rank": 2 },
+		{ "suit": 1, "rank": 3 },
+		{ "suit": 1, "rank": 6 },
+		{ "suit": 1, "rank": 7 },
+		{ "suit": 1, "rank": 8 },
+		{ "suit": 1, "rank": 9 },
+		{ "suit": 1, "rank": 10 },
 		{ "suit": 1, "rank": 11 },
-		{ "suit": 2, "rank": 2 },
-		{ "suit": 2, "rank": 7 },
-		{ "suit": 2, "rank": 8 },
-		{ "suit": 2, "rank": 9 },
-		{ "suit": 2, "rank": 13 }
+		{ "suit": 1, "rank": 13 }
 	  ]
 	},
 	{
 	  "card_id": "heal",
 	  "copies": [
-		{ "suit": 1, "rank": 4 },
-		{ "suit": 1, "rank": 7 },
-		{ "suit": 1, "rank": 9 },
-		{ "suit": 1, "rank": 10 },
-		{ "suit": 1, "rank": 4 },
-		{ "suit": 1, "rank": 4 },
-		{ "suit": 2, "rank": 12 }
+		{ "suit": 0, "rank": 4 },
+		{ "suit": 0, "rank": 6 },
+		{ "suit": 0, "rank": 7 },
+		{ "suit": 0, "rank": 8 },
+		{ "suit": 0, "rank": 9 },
+		{ "suit": 0, "rank": 10 },
+		{ "suit": 0, "rank": 12 },
+		{ "suit": 1, "rank": 2 }
 	  ]
 	},
 	{
 	  "card_id": "discard",
 	  "copies": [
-		{ "suit": 0, "rank": 3 },
-		{ "suit": 0, "rank": 4 },
-		{ "suit": 1, "rank": 12 }
+		{ "suit": 3, "rank": 3 },
+		{ "suit": 3, "rank": 4 },
+		{ "suit": 0, "rank": 12 }
 	  ]
 	},
 	{
 	  "card_id": "steal",
 	  "copies": [
-		{ "suit": 0, "rank": 3 },
-		{ "suit": 0, "rank": 4 },
-		{ "suit": 2, "rank": 3 }
+		{ "suit": 3, "rank": 3 },
+		{ "suit": 3, "rank": 4 },
+		{ "suit": 1, "rank": 3 }
 	  ]
 	},
 	{
 	  "card_id": "crossbow",
-	  "copies": [{ "suit": 2, "rank": 1 }]
+	  "copies": [{ "suit": 1, "rank": 1 }]
 	},
 	{
 	  "card_id": "butchers_knife",
-	  "copies": [{ "suit": 0, "rank": 2 }]
+	  "copies": [{ "suit": 3, "rank": 2 }]
 	},
 	{
 	  "card_id": "slingshot",
-	  "copies": [{ "suit": 2, "rank": 12 }]
+	  "copies": [{ "suit": 1, "rank": 12 }]
 	},
 	{
 	  "card_id": "pistol",
-	  "copies": [{ "suit": 2, "rank": 12 }]
+	  "copies": [{ "suit": 1, "rank": 12 }]
 	},
 	{
 	  "card_id": "rifle",
-	  "copies": [{ "suit": 1, "rank": 5 }]
+	  "copies": [{ "suit": 0, "rank": 5 }]
 	},
 	{
 	  "card_id": "gatling",
-	  "copies": [
-		{ "suit": 1, "rank": 1 },
-		{ "suit": 1, "rank": 11 },
-		{ "suit": 2, "rank": 4 }
-	  ]
+	  "copies": [{ "suit": 0, "rank": 1 }]
 	},
 	{
 	  "card_id": "indian",
 	  "copies": [
-		{ "suit": 0, "rank": 13 },
-		{ "suit": 3, "rank": 3 },
-		{ "suit": 3, "rank": 7 }
+		{ "suit": 3, "rank": 13 },
+		{ "suit": 2, "rank": 7 }
 	  ]
 	},
 	{
 	  "card_id": "draw_2",
 	  "copies": [
-		{ "suit": 1, "rank": 7 },
-		{ "suit": 1, "rank": 8 }
+		{ "suit": 0, "rank": 7 },
+		{ "suit": 0, "rank": 8 }
 	  ]
 	},
 	{
 	  "card_id": "exchange",
 	  "copies": [
-		{ "suit": 1, "rank": 11 },
-		{ "suit": 2, "rank": 4 }
+		{ "suit": 0, "rank": 11 },
+		{ "suit": 1, "rank": 4 }
 	  ]
 	},
 	{
 	  "card_id": "saloon",
-	  "copies": [{ "suit": 1, "rank": 1 }]
+	  "copies": [{ "suit": 0, "rank": 1 }]
 	}
   ]
 }

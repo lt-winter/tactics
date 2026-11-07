@@ -39,6 +39,24 @@ func equip_weapon(actor_id: int, card_id: int) -> ActionResult:
 	return executor.equip_weapon(actor_id, card_id)
 
 
+func equip_armor(actor_id: int, card_id: int) -> ActionResult:
+	return executor.equip_armor(actor_id, card_id)
+
+
+func get_pending_armor() -> Dictionary:
+	var damage: Dictionary = executor.damage_pipeline.get_pending_armor()
+	return damage if not damage.is_empty() else executor.attack_resolution.get_armor_decision()
+
+
+func resolve_armor(owner_id: int, decision_id: int, activate: bool) -> ActionResult:
+	var blocked: String = turn_manager.get_dying_block_reason()
+	if not blocked.is_empty():
+		return ActionResult.failure(blocked)
+	var damage: Dictionary = executor.damage_pipeline.get_pending_armor()
+	var result: ActionResult = executor.damage_pipeline.resolve_armor(owner_id, decision_id, activate) if not damage.is_empty() else executor.attack_resolution.resolve_armor(owner_id, decision_id, activate)
+	return _resume_after(result)
+
+
 func get_weapon(player_id: int) -> CardInstance:
 	return executor.equipment_system.get_weapon(player_id)
 
@@ -164,6 +182,10 @@ func discard_for_turn(player_id: int, card_id: int) -> ActionResult:
 	return _resume_after(executor.discard_for_turn(player_id, card_id))
 
 
+func discard_cards_for_turn(player_id: int, card_ids: Array[int]) -> ActionResult:
+	return _resume_after(executor.discard_cards_for_turn(player_id, card_ids))
+
+
 func _resume_after(result: ActionResult) -> ActionResult:
 	if result.valid and not game_state.match_over:
 		# A completed action remains successful even if a later phase is held.
@@ -177,11 +199,29 @@ func use_attack(actor_id: int, target_id: int, card_id: int) -> ActionResult:
 	return executor.use_attack(actor_id, target_id, card_id)
 
 
+func use_attack_targets(actor_id: int, target_ids: Array[int], card_id: int) -> ActionResult:
+	_sync_turn_counter()
+	return executor.use_attack_targets(actor_id, target_ids, card_id)
+
+
+func get_attack_target_limit(actor_id: int) -> int:
+	return executor.attack_resolution.target_limit(actor_id)
+
+
+func get_pending_weapon() -> Dictionary:
+	return executor.attack_resolution.get_decision()
+
+
+func resolve_weapon(actor_id: int, decision_id: int, activate: bool, card_ids: Array[int] = [], target_id: int = 0) -> ActionResult:
+	return _resume_after(executor.attack_resolution.decide(actor_id, decision_id, activate, card_ids, target_id))
+
+
 func respond_to_attack(target_id: int, dodge_card_id: int = 0) -> ActionResult:
 	return _resume_after(executor.respond_to_attack(target_id, dodge_card_id))
 
 
 func has_pending_response() -> bool:
+	executor.attack_resolution.resume()
 	return executor.has_pending_attack()
 
 

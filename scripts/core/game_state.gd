@@ -160,7 +160,7 @@ func validate_state() -> bool:
 		return false
 
 	for player in players:
-		if player.hp < 0 or player.hp > player.max_hp:
+		if player.hp > player.max_hp or (player.life_state == Player.LifeState.ALIVE and player.hp <= 0) or (player.is_dying() and player.hp > 0):
 			push_error(
 				"HP không hợp lệ của Player %d"
 				% player.player_id

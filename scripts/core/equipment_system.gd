@@ -33,14 +33,16 @@ func get_equipment(player_id: int, slot: String) -> CardInstance:
 	return null
 
 
-func commit_equip(player_id: int, card_id: int) -> ActionResult:
+func commit_equip(player_id: int, card_id: int, slot: String = "weapon") -> ActionResult:
+	if slot not in CardDefinition.EQUIPMENT_SLOTS:
+		return ActionResult.failure("Slot trang bị không hợp lệ.")
 	var moves: Array[Dictionary] = []
-	var old_weapon: CardInstance = get_weapon(player_id)
+	var old_weapon: CardInstance = get_equipment(player_id, slot)
 	if old_weapon != null:
 		moves.append({"card_id": old_weapon.instance_id, "from_zone": "equipment", "from_player_id": player_id, "to_zone": "discard", "to_player_id": 0})
 	moves.append({"card_id": card_id, "from_zone": "hand", "from_player_id": player_id, "to_zone": "equipment", "to_player_id": player_id})
 	if not game_state.zone_manager.transfer_cards(moves):
-		return ActionResult.failure("Không thể trang bị vũ khí; bài và trang bị cũ được giữ nguyên.")
+		return ActionResult.failure("Không thể trang bị; bài và trang bị cũ được giữ nguyên.")
 	return ActionResult.success()
 
 

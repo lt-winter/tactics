@@ -32,7 +32,12 @@ func validate_support_tool(actor_id: int, card_id: int) -> ActionResult:
 		return ActionResult.failure("Không sở hữu công cụ hỗ trợ được hỗ trợ hoặc sai tham số.")
 	if effect["effect_id"] == "draw_cards":
 		var parameters: Dictionary = effect["parameters"]
-		var available: int = actor.get_hand_count() - 1 + mini(int(parameters["count"]), game_state.deck.get_draw_count() + game_state.deck.get_discard_count())
+		var discard_zones: Array = parameters.get("discard_zones", ["hand"])
+		var discardable: int = 0
+		for zone: String in discard_zones:
+			discardable += actor.get_zone(zone).size()
+		var drawn: int = mini(int(parameters["count"]), game_state.deck.get_draw_count() + game_state.deck.get_discard_count()) if "hand" in discard_zones else 0
+		var available: int = discardable - (1 if "hand" in discard_zones else 0) + drawn
 		if available < int(parameters.get("discard_count", 0)):
 			return ActionResult.failure("Không đủ bài khả dụng để hoàn tất số lá bắt buộc bỏ.")
 	return ActionResult.success()
@@ -81,6 +86,14 @@ func _init(
 
 
 func validate_equip_weapon(actor_id: int, card_id: int) -> ActionResult:
+	return validate_equip_slot(actor_id, card_id, "weapon")
+
+
+func validate_equip_armor(actor_id: int, card_id: int) -> ActionResult:
+	return validate_equip_slot(actor_id, card_id, "armor")
+
+
+func validate_equip_slot(actor_id: int, card_id: int, slot: String) -> ActionResult:
 	var blocked: String = turn_manager.get_transition_block_reason()
 	if blocked.is_empty():
 		blocked = turn_manager.get_effect_wait_reason()
@@ -88,13 +101,15 @@ func validate_equip_weapon(actor_id: int, card_id: int) -> ActionResult:
 		return ActionResult.failure(blocked)
 	var actor: Player = turn_manager.get_current_player()
 	if actor == null or actor.player_id != actor_id or not actor.is_alive() or turn_manager.current_phase != TurnManager.Phase.PLAY:
-		return ActionResult.failure("Chỉ trang bị vũ khí cho bản thân trong giai đoạn sử dụng bài của mình.")
+		return ActionResult.failure("Chỉ trang bị cho bản thân trong giai đoạn sử dụng bài của mình.")
 	for card: CardInstance in actor.hand:
 		if card.instance_id == card_id:
-			if card.definition.is_equipment() and card.definition.equipment_slot == "weapon" and card.definition.attack_range > 0:
+			if slot == "armor" and ArmorEffectRegistry.supports(card.definition):
 				return ActionResult.success()
-			return ActionResult.failure("Lá đã chọn không phải vũ khí hợp lệ.")
-	return ActionResult.failure("Không sở hữu lá vũ khí đã chọn.")
+			if slot == "weapon" and card.definition.is_equipment() and card.definition.equipment_slot == "weapon" and card.definition.attack_range > 0:
+				return ActionResult.success()
+			return ActionResult.failure("Lá đã chọn không phù hợp với slot hoặc hiệu ứng chưa được hỗ trợ.")
+	return ActionResult.failure("Không sở hữu lá trang bị đã chọn.")
 
 
 func validate_rescue(rescuer_id: int, target_id: int, card_id: int) -> ActionResult:
@@ -179,7 +194,7 @@ func validate_tool_use(actor_id: int, target_id: int, card_id: int) -> ActionRes
 		var number: float = float(maximum)
 		if not is_finite(number) or number < 0 or number != floor(number):
 			return ActionResult.failure("Tầm công cụ không hợp lệ.")
-		var distance: int = DistanceCalculator.calculate(game_state.players, actor_id, target_id)
+		var distance: int = DistanceCalculator.calculate(game_state.players, actor_id, target_id, turn_manager.seat_order)
 		if distance < 0 or distance > number:
 			return ActionResult.failure("Mục tiêu nằm ngoài tầm công cụ.")
 	var zones: Array = parameters.get("target_zones", [])
@@ -201,6 +216,22 @@ func validate_tool_choice(actor_id: int, target_id: int, card_id: int, target_ca
 		if card.instance_id == target_card_id:
 			return ActionResult.success()
 	return ActionResult.failure("Lá bài đã chọn không còn thuộc mục tiêu.")
+
+
+func validate_turn_discards(player_id: int, card_ids: Array[int]) -> ActionResult:
+	if card_ids.is_empty():
+		return ActionResult.failure("Chưa chọn lá bài cần bỏ.")
+	var seen: Dictionary = {}
+	for card_id: int in card_ids:
+		if seen.has(card_id):
+			return ActionResult.failure("Không thể chọn trùng lá bài.")
+		seen[card_id] = true
+		var validation: ActionResult = validate_turn_discard(player_id, card_id)
+		if not validation.valid:
+			return validation
+	if card_ids.size() > turn_manager.get_required_discards():
+		return ActionResult.failure("Số lá đã chọn vượt quá số lá cần bỏ.")
+	return ActionResult.success()
 
 
 func validate_turn_discard(player_id: int, card_id: int) -> ActionResult:
@@ -314,7 +345,8 @@ func validate_attack(
 	var distance: int = DistanceCalculator.calculate(
 		game_state.players,
 		actor_id,
-		target_id
+		target_id,
+		turn_manager.seat_order
 	)
 
 	if distance < 0:

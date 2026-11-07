@@ -5,6 +5,7 @@ extends RefCounted
 var draw_pile: Array[CardInstance] = []
 var discard_pile: Array[CardInstance] = []
 var shuffle_count: int = 0
+var reshuffle_count: int = 0
 
 var rng := RandomNumberGenerator.new()
 
@@ -33,6 +34,7 @@ func recycle_discard_pile() -> void:
 	draw_pile.append_array(discard_pile)
 	discard_pile.clear()
 	shuffle()
+	reshuffle_count += 1
 
 
 func get_draw_count() -> int:

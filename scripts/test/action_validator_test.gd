@@ -197,6 +197,8 @@ static func run_all() -> void:
 
 	# Test 11: Mục tiêu đã chết
 	player_c.hp = 0
+	assert(player_c.enter_dying())
+	assert(player_c.eliminate())
 
 	result = validator.validate_attack(
 		1, 3, attack_card.instance_id, 0

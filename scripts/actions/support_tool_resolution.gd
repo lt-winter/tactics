@@ -27,7 +27,17 @@ static func valid_effect(effect: Dictionary) -> bool:
 		return false
 	match effect.get("effect_id"):
 		"draw_cards":
-			return _whole_number(parameters.get("count"), 1) and _whole_number(parameters.get("discard_count", 0), 0)
+			if not _whole_number(parameters.get("count"), 1) or not _whole_number(parameters.get("discard_count", 0), 0):
+				return false
+			var discard_zones: Variant = parameters.get("discard_zones", ["hand"])
+			if not discard_zones is Array or discard_zones.is_empty():
+				return false
+			var seen_zones: Dictionary = {}
+			for zone: Variant in discard_zones:
+				if not zone is String or zone not in ["hand", "equipment"] or seen_zones.has(zone):
+					return false
+				seen_zones[zone] = true
+			return true
 		"heal_all_players":
 			return _whole_number(parameters.get("amount"), 1) and float(parameters["amount"]) == 1.0
 	return false
@@ -68,7 +78,13 @@ func execute(actor_id: int, card: CardInstance, effect: Dictionary) -> ActionRes
 		_resolver.draw_cards(actor_id, int(parameters["count"]))
 		var discard_count: int = int(parameters.get("discard_count", 0))
 		if discard_count > 0:
-			_pending = {"actor_id": actor_id, "card_id": card.instance_id, "card_name": card.definition.display_name, "discard_count": discard_count}
+			_pending = {
+				"actor_id": actor_id,
+				"card_id": card.instance_id,
+				"card_name": card.definition.display_name,
+				"discard_count": discard_count,
+				"discard_zones": parameters.get("discard_zones", ["hand"])
+			}
 	else:
 		_resolver.heal_all_players(int(parameters["amount"]), actor_id)
 	var paid: bool = _state.discard_card(actor_id, card.instance_id)
@@ -90,18 +106,24 @@ func discard_selected(actor_id: int, card_ids: Array[int]) -> ActionResult:
 	var actor: Player = _state.get_player(actor_id)
 	var seen: Dictionary = {}
 	var moves: Array[Dictionary] = []
+	var discard_zones: Array = _pending.get("discard_zones", ["hand"])
 	for card_id: int in card_ids:
 		if seen.has(card_id):
 			return ActionResult.failure("Không thể chọn trùng lá bài.")
 		seen[card_id] = true
 		var owned: bool = false
-		for card: CardInstance in actor.hand:
-			if card.instance_id == card_id:
-				owned = true
+		var source_zone: String = ""
+		for zone: String in discard_zones:
+			for card: CardInstance in actor.get_zone(zone):
+				if card.instance_id == card_id:
+					owned = true
+					source_zone = zone
+					break
+			if owned:
 				break
 		if not owned:
-			return ActionResult.failure("Lá đã chọn không còn trên tay người sử dụng.")
-		moves.append({"card_id": card_id, "from_zone": "hand", "from_player_id": actor_id, "to_zone": "discard", "to_player_id": 0})
+			return ActionResult.failure("Lá đã chọn không còn trong vùng được phép bỏ.")
+		moves.append({"card_id": card_id, "from_zone": source_zone, "from_player_id": actor_id, "to_zone": "discard", "to_player_id": 0})
 	_executing = true
 	var moved: bool = _state.zone_manager.transfer_cards(moves)
 	_executing = false

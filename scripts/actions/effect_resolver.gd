@@ -3,10 +3,15 @@ class_name EffectResolver
 extends RefCounted
 
 var game_state: GameState
+var _damage_pipeline_ref: WeakRef
 
 
 func _init(state: GameState) -> void:
 	game_state = state
+
+
+func bind_damage_pipeline(pipeline: DamagePipeline) -> void:
+	_damage_pipeline_ref = weakref(pipeline)
 
 
 func draw_cards(player_id: int, count: int) -> int:
@@ -31,6 +36,20 @@ func heal_all_players(amount: int, source_id: int = 0) -> bool:
 
 
 func deal_damage(
+	target_id: int,
+	amount: int,
+	source_id: int = 0
+) -> bool:
+	if _damage_pipeline_ref != null:
+		var pipeline: DamagePipeline = _damage_pipeline_ref.get_ref() as DamagePipeline
+		if pipeline != null:
+			# This legacy primitive accepts an already-calculated amount. Apply
+			# armor without repeating the ordered/legacy damage modifiers.
+			return pipeline.process_resolved_damage(source_id, target_id, amount)
+	return _apply_damage(target_id, amount, source_id)
+
+
+func _apply_damage(
 	target_id: int,
 	amount: int,
 	source_id: int = 0

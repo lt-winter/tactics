@@ -28,17 +28,23 @@ func _run() -> void:
 	assert(_ui._events == events_before and _ui.game_state.get_player(1).get_hand_count() == 4)
 	await _double_click("Card%d" % draw.instance_id)
 	assert(_ui.game_state.get_player(1).get_hand_count() == 5)
-	assert(_ui.game_state.deck.discard_pile.count(draw) == 1 and not _ui._choice_overlay.visible)
+	assert(_ui.game_state.deck.discard_pile.count(draw) == 1 and not _ui.is_choice_visible())
 	assert(_ui.combat.executor.resolver.deal_damage(1, 2))
 	assert(_ui.combat.executor.resolver.deal_damage(2, 1))
 	_ui._refresh()
 	await _click("Card%d" % saloon.instance_id)
 	await _click("ActionConfirm")
 	assert(_ui.game_state.get_player(1).hp == 3 and _ui.game_state.get_player(2).hp == 4)
-	assert(not _ui._choice_overlay.visible and _ui.game_state.deck.discard_pile.count(saloon) == 1)
+	assert(not _ui.is_choice_visible() and _ui.game_state.deck.discard_pile.count(saloon) == 1)
 	var hand_before: int = _ui.game_state.get_player(1).get_hand_count()
 	await _double_click("Card%d" % exchange.instance_id)
 	assert(_ui._choice_kind == "support" and _ui._choice_confirm.disabled)
+	await process_frame
+	await process_frame
+	assert(_ui._inline_choice_host.is_visible_in_tree() and not _ui._choice_overlay.visible)
+	assert(not _ui._hand_column.visible)
+	assert(_ui._choice_confirm.get_global_rect().end.y <= _ui._choice_scroll.get_global_rect().position.y)
+	assert(_ui._inline_choice_host.get_global_rect().end.y <= root.size.y)
 	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before + 2)
 	assert((_ui.find_child("EndTurn", true, false) as Button).disabled)
 	assert(_ui._choice_title.text.contains(exchange.definition.display_name))
@@ -57,6 +63,7 @@ func _run() -> void:
 	assert(_ui.combat.executor.resolver.deal_damage(2, 4))
 	_ui._refresh()
 	assert(_ui._choice_kind == "dying" and _ui.combat.has_pending_support())
+	assert(_ui._inline_choice_host.visible and not _ui._choice_overlay.visible)
 	var rescuers: OptionButton = _ui.find_child("DyingRescuer", true, false) as OptionButton
 	for index: int in range(rescuers.item_count):
 		if rescuers.get_item_id(index) == 1:
@@ -73,11 +80,32 @@ func _run() -> void:
 	await _click("SupportDiscardCard%d" % first.instance_id)
 	assert(_ui._choice_confirm.disabled and _ui._events == events_before)
 	await _double_click("SupportDiscardCard%d" % second.instance_id)
-	assert(not _ui.combat.has_pending_support() and not _ui._choice_overlay.visible)
+	assert(not _ui.combat.has_pending_support() and not _ui.is_choice_visible())
 	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before - 1)
 	assert(_ui.game_state.deck.discard_pile.count(first) == 1 and _ui.game_state.deck.discard_pile.count(second) == 1)
 	assert(_ui.game_state.deck.discard_pile.count(exchange) == 1)
 	assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.PLAY and _ui.combat.executor.attacks_used == 0)
+	assert(_ui.game_state.validate_state())
+	# Equipment is a distinct face-up section and is discarded through the same API.
+	_fixture()
+	var weapon: CardInstance = AoeSystemTest.give(_ui.combat, 1, "crossbow")
+	assert(_ui.combat.equip_weapon(1, weapon.instance_id).valid)
+	exchange = AoeSystemTest.give(_ui.combat, 1, "exchange")
+	_ui._refresh()
+	await _double_click("Card%d" % exchange.instance_id)
+	assert(_ui.find_child("SupportZone_hand", true, false) != null)
+	var equipment_section: Node = _ui.find_child("SupportZone_equipment", true, false)
+	assert(equipment_section != null)
+	var equipped_button: Button = equipment_section.find_child("SupportDiscardCard%d" % weapon.instance_id, true, false) as Button
+	assert(equipped_button != null and not equipped_button.disabled)
+	assert(str(equipped_button.get_meta("choice_zone")) == "equipment")
+	first = _ui.game_state.get_player(1).hand[0]
+	await _click(equipped_button.name)
+	await _click("SupportDiscardCard%d" % first.instance_id)
+	await _click("ChoiceConfirm")
+	assert(not _ui.combat.has_pending_support() and _ui.combat.get_weapon(1) == null)
+	assert(_ui.game_state.deck.discard_pile.count(weapon) == 1)
+	assert(_ui._events.back().contains(weapon.definition.display_name))
 	assert(_ui.game_state.validate_state())
 	_ui.queue_free()
 	await process_frame
@@ -95,7 +123,7 @@ func _fixture() -> void:
 	_ui.selected_target_id = 0
 	_ui.displayed_player_id = 0
 	_ui._choice_kind = ""
-	_ui._choice_overlay.hide()
+	_ui._hide_choice()
 	_ui._events.clear()
 	_ui._refresh()
 

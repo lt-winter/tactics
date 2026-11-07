@@ -63,13 +63,22 @@ func get_transition_block_reason() -> String:
 	var dying_reason: String = get_dying_block_reason()
 	if not dying_reason.is_empty():
 		return dying_reason
+	if game_state.zone_manager.is_transfer_in_progress():
+		return "Đang chuyển vùng bài; chờ hoàn tất trước khi tiếp tục."
 	if _executor_ref != null:
 		var action_executor: ActionExecutor = _executor_ref.get_ref() as ActionExecutor
 		if action_executor != null:
+			action_executor.damage_pipeline.resume_pending()
+			dying_reason = get_dying_block_reason()
+			if not dying_reason.is_empty():
+				return dying_reason
+			if action_executor.damage_pipeline.is_busy():
+				return "Phải giải quyết lựa chọn phòng ngự trước."
 			if action_executor.support_tools.has_pending():
 				return "Phải hoàn tất lựa chọn công cụ hỗ trợ trước."
-			if action_executor.has_pending_attack():
-				return "Phải giải quyết phản ứng Tấn công trước."
+			action_executor.attack_resolution.resume()
+			if action_executor.attack_resolution.is_busy():
+				return "Phải giải quyết phản ứng Tấn công hoặc lựa chọn vũ khí trước."
 			if action_executor.has_pending_aoe():
 				return "Phải giải quyết phản ứng AOE trước."
 	return ""

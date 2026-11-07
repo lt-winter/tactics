@@ -22,6 +22,10 @@ func _run() -> void:
 	var phase_label: Label = _ui.find_child("PhaseLabel", true, false) as Label
 	assert(phase_label.text.contains("Giai đoạn sử dụng bài"))
 	assert(not phase_label.text.contains("PLAY"))
+	for entry: String in _ui._events:
+		assert(not entry.contains("Chia 4 lá/người"))
+	for node: Node in _ui.find_children("*", "Label", true, false):
+		assert(not (node as Label).text.contains("Ngược chiều kim đồng hồ:"))
 	await process_frame
 	var human_seat: Button = _ui.find_child("Seat1", true, false) as Button
 	var bot_one_seat: Button = _ui.find_child("Seat2", true, false) as Button
@@ -72,7 +76,7 @@ func _run() -> void:
 	assert(deck_panel.get_global_rect().end.y <= log_panel.get_global_rect().position.y)
 	var deck_label: Label = _ui.find_child("DeckInfoLabel", true, false) as Label
 	assert(deck_label.text.contains("Chồng rút: %d" % _ui.game_state.deck.get_draw_count()))
-	assert(deck_label.text.contains("Xào: 1 lần"))
+	assert(deck_label.text.contains("Xào lại: 0 lần"))
 	await _click("Seat2")
 	assert(_ui.selected_target_id == 2)
 	for expected: int in [2, 3, 4, 1]:
@@ -196,7 +200,7 @@ func _make_target_dying() -> void:
 		var phase_before: TurnManager.Phase = _ui.combat.turn_manager.current_phase
 		_press("EndTurn")
 		assert(_ui.combat.turn_manager.current_phase == phase_before)
-		assert((_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
+		assert(_ui.is_choice_visible())
 		_press("ChoiceCancel")
 		assert(not _ui.combat.has_pending_response())
 		assert(_ui.game_state.get_player(2).hp == 3 - hit)
@@ -206,7 +210,7 @@ func _make_target_dying() -> void:
 	assert(_ui.combat.has_pending_dying())
 	assert(_ui.game_state.get_player(2).is_dying())
 	assert(_ui._choice_kind == "dying")
-	assert((_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
+	assert(_ui.is_choice_visible())
 	assert(_ui.game_state.validate_state())
 
 
@@ -366,7 +370,7 @@ func _test_dying_modal_priority() -> void:
 	_press("ChoiceCancel")
 	assert(_ui.game_state.get_player(2).is_eliminated())
 	assert(not _ui.combat.has_pending_response() and not _ui.combat.has_pending_dying())
-	assert(not (_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
+	assert(not _ui.is_choice_visible())
 	assert(_ui.game_state.validate_state())
 
 
@@ -401,7 +405,7 @@ func _test_weapon_equip() -> void:
 	assert(_ui.combat.get_weapon(1) == rifle)
 	assert(_ui.game_state.deck.discard_pile.has(crossbow))
 	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Súng trường · Tầm 5"))
-	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("chưa được triển khai"))
+	assert(not (_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("chưa được triển khai"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Nỏ thần"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Tấn công"))
 	_select_human_attack()
@@ -570,6 +574,16 @@ func _test_hidden_tools() -> void:
 		assert(face_up != null and (face_up.find_child("CardTitle", true, false) as Label).text == equipment.definition.display_name.to_upper())
 		for zone: String in ["hand", "equipment", "judgment"]:
 			assert(_ui.find_child("ToolZone_" + zone, true, false) != null)
+		await process_frame
+		await process_frame
+		var hand_zone: Control = _ui.find_child("ToolZone_hand", true, false) as Control
+		var equipment_zone: Control = _ui.find_child("ToolZone_equipment", true, false) as Control
+		var judgment_zone: Control = _ui.find_child("ToolZone_judgment", true, false) as Control
+		assert(hand_zone.get_global_rect().end.y <= equipment_zone.get_global_rect().position.y)
+		assert(equipment_zone.get_global_rect().end.y <= judgment_zone.get_global_rect().position.y)
+		assert(is_equal_approx(hand_zone.get_global_rect().position.x, equipment_zone.get_global_rect().position.x))
+		assert(_ui._choice_panel.get_global_rect().end.y <= 720.0)
+		assert(_ui._choice_scroll.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_AUTO)
 		assert((_ui.find_child("ToolZone_hand", true, false) as Node).is_ancestor_of(back))
 		assert((_ui.find_child("ToolZone_equipment", true, false) as Node).is_ancestor_of(face_up))
 		assert(not face_up.text.contains("BÀI ÚP"))
@@ -595,13 +609,14 @@ func _test_hidden_tools() -> void:
 		for node: Node in _ui.find_child("ToolZone_judgment", true, false).find_children("*", "Button", true, false):
 			judgment_back = node as Button
 		assert(judgment_back != null and judgment_back.text.contains("BÀI ÚP"))
-		judgment_back.pressed.emit()
+		await _click(str(judgment_back.name))
 		assert(_ui._choice_zone == "judgment" and _ui._choice_selected_card_id == judgment.instance_id)
-		_press("EquipmentCard%d" % equipment.instance_id)
+		await _click("EquipmentCard%d" % equipment.instance_id)
 		assert(_ui._choice_zone == "equipment" and not judgment_back.button_pressed)
 		assert(_ui.combat.get_weapon(2) == equipment)
 		_press("ChoiceConfirm")
 		assert(_ui.combat.get_weapon(2) == null)
+		assert(not (_ui.find_child("Seat2", true, false) as Button).text.contains("Tầm"))
 		assert(not _ui.combat.executor.validator.rule_engine.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
 		assert(_ui.game_state.validate_state())
 
@@ -618,7 +633,7 @@ func _test_winner_ui() -> void:
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 thắng cuộc"))
 	assert((_ui.find_child("EndTurn", true, false) as Button).disabled)
 	assert(_ui.find_child("HumanDraw", true, false) == null)
-	assert(not (_ui.find_child("CardChoiceOverlay", true, false) as Control).visible)
+	assert(not _ui.is_choice_visible())
 	var before_hand: int = _ui.game_state.get_player(1).get_hand_count()
 	assert(_ui.game_state.draw_card(1) == null)
 	assert(_ui.game_state.get_player(1).get_hand_count() == before_hand)

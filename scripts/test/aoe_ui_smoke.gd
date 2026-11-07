@@ -46,7 +46,7 @@ func _run() -> void:
 		await _click("ChoiceCancel")
 		assert(_ui.game_state.get_player(3).hp == 3 and _ui._choice_target_id == 4)
 		await _click("ChoiceCancel")
-		assert(not _ui.combat.has_pending_aoe() and not _ui._choice_overlay.visible)
+		assert(not _ui.combat.has_pending_aoe() and not _ui.is_choice_visible())
 		assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.PLAY)
 		assert(_ui.combat.executor.attacks_used == 0 and _ui.game_state.validate_state())
 	await _test_dying()
@@ -67,7 +67,7 @@ func _fixture(order: Array[int] = [1, 2, 3, 4]) -> void:
 	_ui.selected_target_id = 0
 	_ui.displayed_player_id = 0
 	_ui._choice_kind = ""
-	_ui._choice_overlay.hide()
+	_ui._hide_choice()
 	_ui._events.clear()
 	_ui._refresh()
 

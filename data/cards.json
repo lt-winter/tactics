@@ -225,11 +225,15 @@
 	  "name": "Trao đổi",
 	  "category": "tool",
 	  "subcategory": "instant",
-	  "description": "Trong giai đoạn sử dụng bài của mình, rút 3 lá rồi chọn bỏ 2 lá trên tay.",
+	  "description": "Trong giai đoạn sử dụng bài của mình, rút 3 lá rồi chọn bỏ 2 lá trên tay hoặc trong khu trang bị.",
 	  "effects": [
 		{
 		  "effect_id": "draw_cards",
-		  "parameters": { "count": 3, "discard_count": 2 }
+		  "parameters": {
+			"count": 3,
+			"discard_count": 2,
+			"discard_zones": ["hand", "equipment"]
+		  }
 		}
 	  ]
 	},
@@ -241,6 +245,82 @@
 	  "description": "Hồi 1 máu cho tất cả người chơi.",
 	  "effects": [
 		{ "effect_id": "heal_all_players", "parameters": { "amount": 1 } }
+	  ]
+	},
+	{
+	  "id": "black_shield",
+	  "name": "Khiên đen",
+	  "category": "equipment",
+	  "subcategory": "armor",
+	  "description": "Nội tại: Khi là mục tiêu của lá [Tấn Công] màu đen (Bích, Chuồn), vô hiệu hóa đòn tấn công đó đối với bản thân.",
+	  "equipment_slot": "armor",
+	  "effects": [
+		{
+		  "effect_id": "negate_attack_by_color",
+		  "parameters": {
+			"colors": ["black"],
+			"trigger": "on_attack_targeted",
+			"optional": false
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "barrel",
+	  "name": "Thùng rượu",
+	  "category": "equipment",
+	  "subcategory": "armor",
+	  "description": "Khi bị [Tấn Công], có thể phán xét một lần. Nếu ra Cơ (♥), xem như đã sử dụng [Né tránh].",
+	  "equipment_slot": "armor",
+	  "effects": [
+		{
+		  "effect_id": "judgment_dodge",
+		  "parameters": {
+			"trigger": "before_attack_response",
+			"success_suit": "hearts",
+			"optional": true
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "helmet",
+	  "name": "Nón bảo hiểm",
+	  "category": "equipment",
+	  "subcategory": "armor",
+	  "description": "Nội tại: Khi nhận sát thương lớn hơn 1, giảm sát thương đó xuống còn 1.",
+	  "equipment_slot": "armor",
+	  "effects": [
+		{
+		  "effect_id": "cap_incoming_damage",
+		  "parameters": {
+			"trigger": "before_damage",
+			"threshold": 1,
+			"max_damage": 1,
+			"optional": false
+		  }
+		}
+	  ]
+	},
+	{
+	  "id": "chainmail",
+	  "name": "Giáp lưới",
+	  "category": "equipment",
+	  "subcategory": "armor",
+	  "description": "Khi chuẩn bị nhận sát thương kết liễu, có thể bỏ Giáp lưới để ngăn toàn bộ sát thương.",
+	  "equipment_slot": "armor",
+	  "effects": [
+		{
+		  "effect_id": "prevent_lethal_damage",
+		  "parameters": {
+			"trigger": "before_damage",
+			"cost": {
+			  "type": "discard_self_equipment"
+			},
+			"prevent_damage": "all",
+			"optional": true
+		  }
+		}
 	  ]
 	}
   ]

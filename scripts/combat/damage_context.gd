@@ -2,7 +2,7 @@
 class_name DamageContext
 extends RefCounted
 
-enum SourceKind { GENERIC, ATTACK, AOE_TOOL }
+enum SourceKind { GENERIC, ATTACK, AOE_TOOL, WEAPON_EFFECT }
 
 var source_kind: SourceKind = SourceKind.GENERIC
 
@@ -19,7 +19,7 @@ func _init(
 	new_damage: int,
 	new_source_kind: SourceKind = SourceKind.GENERIC
 ) -> void:
-	assert(new_source_id > 0)
+	assert(new_source_id >= 0)
 	assert(new_target_id > 0)
 	assert(new_damage > 0)
 
