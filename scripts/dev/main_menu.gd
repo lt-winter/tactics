@@ -122,7 +122,7 @@ func _show_catalog() -> void:
 	var database: CardDatabase = CardDatabase.new()
 	var intro: Label = _label(entries, "", 14)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if not database.load_from_file("res://data/cards.json"):
+	if not database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH):
 		intro.text = "Không thể nạp danh mục: " + "; ".join(database.get_errors())
 		return
 	intro.text = "%d loại bài trong bộ dữ liệu hiện tại." % database.definitions.size()
@@ -140,6 +140,8 @@ func _show_catalog() -> void:
 		var category: String = {"basic": "Cơ bản", "tool": "Công cụ", "equipment": "Trang bị"}.get(definition.category, definition.category)
 		if definition.equipment_slot == "weapon":
 			category += " · Vũ khí · Tầm %d" % definition.attack_range
+		elif definition.equipment_slot in AccessoryEffects.SLOTS:
+			category += " · Phụ kiện " + ("tấn công" if definition.equipment_slot == "offensive_accessory" else "phòng thủ")
 		_label(item_column, category, 12)
 		var description: Label = _label(item_column, definition.description, 14)
 		description.name = "Description"

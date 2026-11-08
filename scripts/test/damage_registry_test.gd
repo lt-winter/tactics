@@ -5,7 +5,7 @@ extends RefCounted
 
 static func run_all() -> void:
 	var card_db: CardDatabase = CardDatabase.new()
-	assert(card_db.load_from_file("res://data/cards.json"))
+	assert(card_db.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 
 	var deck_db: DeckDatabase = DeckDatabase.new(card_db)
 	assert(deck_db.load_from_file(

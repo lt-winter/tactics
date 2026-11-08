@@ -1,0 +1,47 @@
+{
+	"cards": [
+		{
+			"id": "attack",
+			"name": "Tấn công",
+			"category": "basic",
+			"subcategory": "attack",
+			"description": "Gây 1 sát thương lên mục tiêu trong tầm đánh.",
+			"effects": [
+				{
+					"effect_id": "deal_attack",
+					"parameters": {
+						"damage": 1
+					}
+				}
+			]
+		},
+		{
+			"id": "dodge",
+			"name": "Né tránh",
+			"category": "basic",
+			"subcategory": "defense",
+			"description": "Vô hiệu hóa một đòn tấn công.",
+			"effects": [
+				{
+					"effect_id": "block_attack",
+					"parameters": {}
+				}
+			]
+		},
+		{
+			"id": "heal",
+			"name": "Hồi máu",
+			"category": "basic",
+			"subcategory": "recovery",
+			"description": "Hồi 1 máu cho mục tiêu",
+			"effects": [
+				{
+					"effect_id": "restore_hp",
+					"parameters": {
+						"amount": 1
+					}
+				}
+			]
+		}
+	]
+}

@@ -93,6 +93,15 @@ func validate_equip_armor(actor_id: int, card_id: int) -> ActionResult:
 	return validate_equip_slot(actor_id, card_id, "armor")
 
 
+func validate_equip_accessory(actor_id: int, card_id: int) -> ActionResult:
+	var actor: Player = game_state.get_player(actor_id)
+	if actor != null:
+		for card: CardInstance in actor.hand:
+			if card.instance_id == card_id and AccessoryEffects.supports(card.definition):
+				return validate_equip_slot(actor_id, card_id, card.definition.equipment_slot)
+	return ActionResult.failure("Không sở hữu phụ kiện được hỗ trợ đã chọn.")
+
+
 func validate_equip_slot(actor_id: int, card_id: int, slot: String) -> ActionResult:
 	var blocked: String = turn_manager.get_transition_block_reason()
 	if blocked.is_empty():
@@ -104,6 +113,8 @@ func validate_equip_slot(actor_id: int, card_id: int, slot: String) -> ActionRes
 		return ActionResult.failure("Chỉ trang bị cho bản thân trong giai đoạn sử dụng bài của mình.")
 	for card: CardInstance in actor.hand:
 		if card.instance_id == card_id:
+			if slot in AccessoryEffects.SLOTS and card.definition.equipment_slot == slot and AccessoryEffects.supports(card.definition):
+				return ActionResult.success()
 			if slot == "armor" and ArmorEffectRegistry.supports(card.definition):
 				return ActionResult.success()
 			if slot == "weapon" and card.definition.is_equipment() and card.definition.equipment_slot == "weapon" and card.definition.attack_range > 0:

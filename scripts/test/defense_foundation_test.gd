@@ -4,7 +4,7 @@ extends RefCounted
 
 static func run_all() -> void:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var armor_data: Dictionary = {"id": "armor_fixture", "name": "Phòng ngự mẫu", "category": "equipment", "subcategory": "armor", "description": "Chưa có hiệu ứng.", "equipment_slot": "armor", "effects": []}
 	var fixture: String = "res://__defense_schema_%d.json" % Time.get_ticks_usec()
 	var file: FileAccess = FileAccess.open(fixture, FileAccess.WRITE)

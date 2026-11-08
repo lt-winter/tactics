@@ -1,6 +1,8 @@
 class_name CardDatabase
 extends RefCounted
 
+const DEFAULT_MANIFEST_PATH: String = "res://data/cards_manifest.json"
+
 const VALID_CATEGORIES = [
 	"basic",
 	"tool",
@@ -20,48 +22,89 @@ var errors: Array[String] = []
 func load_from_file(path: String) -> bool:
 	definitions.clear()
 	errors.clear()
+	var root: Dictionary = _read_object(path)
+	if not errors.is_empty():
+		return false
+	var temporary: Dictionary = {}
+	var origins: Dictionary = {}
+	if root.has("files"):
+		if root.has("cards") or not root["files"] is Array or root["files"].is_empty():
+			errors.append(path + ": manifest cần mảng files không rỗng, không kèm cards.")
+			return false
+		var seen_paths: Dictionary = {}
+		for index: int in range(root["files"].size()):
+			var entry: Variant = root["files"][index]
+			var location: String = "%s.files[%d]" % [path, index]
+			if not entry is String:
+				errors.append(location + ": đường dẫn phải là chuỗi res:// tới file JSON.")
+				continue
+			var source_path: String = entry
+			if not source_path.begins_with("res://") or not source_path.ends_with(".json"):
+				errors.append(location + ": đường dẫn không hợp lệ: " + source_path)
+				continue
+			source_path = source_path.simplify_path()
+			if seen_paths.has(source_path):
+				errors.append(location + ": file nhóm bị lặp: " + source_path)
+				continue
+			seen_paths[source_path] = true
+			var error_count: int = errors.size()
+			var group: Dictionary = _read_object(source_path)
+			if errors.size() == error_count:
+				_merge_group(group, source_path, temporary, origins)
+	else:
+		# Retain single-group loading for schema fixtures and public API compatibility.
+		_merge_group(root, path, temporary, origins)
+	if not errors.is_empty():
+		return false
+	definitions = temporary
+	return true
+
+
+func _read_object(path: String) -> Dictionary:
 
 	if not FileAccess.file_exists(path):
 		errors.append("Không tìm thấy file: " + path)
-		return false
+		return {}
 
-	var file := FileAccess.open(path, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 
 	if file == null:
 		errors.append(
-            "Không mở được file. Mã lỗi: %s"
-			% FileAccess.get_open_error()
+			"%s: không mở được file. Mã lỗi: %s"
+			% [path, FileAccess.get_open_error()]
 		)
-		return false
+		return {}
 
-	var content := file.get_as_text()
+	var content: String = file.get_as_text()
 	file.close()
 
-	var json := JSON.new()
-	var parse_error := json.parse(content)
+	var json: JSON = JSON.new()
+	var parse_error: Error = json.parse(content)
 
 	if parse_error != OK:
 		errors.append(
-            "Lỗi JSON dòng %d: %s"
-			% [json.get_error_line(), json.get_error_message()]
+			"%s: lỗi JSON dòng %d: %s"
+			% [path, json.get_error_line(), json.get_error_message()]
 		)
-		return false
+		return {}
 
 	var root: Variant = json.data
 
 	if not (root is Dictionary):
-		errors.append("Dữ liệu gốc phải là Object.")
-		return false
+		errors.append(path + ": dữ liệu gốc phải là Object.")
+		return {}
+	return root
 
-	if not root.has("cards") or not (root["cards"] is Array):
-		errors.append("Thiếu mảng cards.")
-		return false
 
-	var temporary: Dictionary = {}
+func _merge_group(root: Dictionary, path: String, temporary: Dictionary, origins: Dictionary) -> void:
 
-	for i in range(root["cards"].size()):
+	if root.has("files") or not root.has("cards") or not (root["cards"] is Array):
+		errors.append(path + ": thiếu mảng cards.")
+		return
+
+	for i: int in range(root["cards"].size()):
 		var card: Variant = root["cards"][i]
-		var location := "cards[%d]" % i
+		var location: String = "%s.cards[%d]" % [path, i]
 
 		if not _validate_card(card, location):
 			continue
@@ -69,16 +112,11 @@ func load_from_file(path: String) -> bool:
 		var card_id: String = card["id"]
 
 		if temporary.has(card_id):
-			errors.append("ID bị trùng: " + card_id)
+			errors.append("ID bị trùng '%s': %s; đã khai báo tại %s." % [card_id, location, origins[card_id]])
 			continue
 
 		temporary[card_id] = card.duplicate(true)
-
-	if not errors.is_empty():
-		return false
-
-	definitions = temporary
-	return true
+		origins[card_id] = location
 
 
 func _validate_card(card: Variant, location: String) -> bool:
@@ -137,6 +175,11 @@ func _validate_card(card: Variant, location: String) -> bool:
 			errors.append(location + " cần subcategory=armor cho slot phòng ngự.")
 			return false
 
+	if str(card.get("equipment_slot", "")) in AccessoryEffects.SLOTS or card["subcategory"] == "accessory":
+		if card["category"] != "equipment" or card["subcategory"] != "accessory" or card["effects"].size() != 1 or not card["effects"][0] is Dictionary or not AccessoryEffects.valid_effect(card["effects"][0], str(card.get("equipment_slot", ""))):
+			errors.append(location + " cần slot phụ kiện và hiệu ứng modify_distance hợp lệ.")
+			return false
+
 	if card["effects"].is_empty() and not (card["category"] == "equipment" and card.get("equipment_slot") == "armor"):
 		errors.append(location + " phải có ít nhất một effect.")
 		valid = false
@@ -153,12 +196,15 @@ func _validate_card(card: Variant, location: String) -> bool:
 		if not effect.has("effect_id"):
 			errors.append(effect_path + " thiếu effect_id.")
 			valid = false
+			continue
 		elif not (effect["effect_id"] is String):
 			errors.append(effect_path + ".effect_id phải là chuỗi.")
 			valid = false
+			continue
 		elif effect["effect_id"].strip_edges().is_empty():
 			errors.append(effect_path + ".effect_id không được rỗng.")
 			valid = false
+			continue
 
 		if not effect.has("parameters"):
 			errors.append(effect_path + " thiếu parameters.")
@@ -172,6 +218,9 @@ func _validate_card(card: Variant, location: String) -> bool:
 			valid = false
 			continue
 
+		if effect.get("effect_id") == "modify_distance" and (card["category"] != "equipment" or card["subcategory"] != "accessory" or card["effects"].size() != 1 or not AccessoryEffects.valid_effect(effect, str(card.get("equipment_slot", "")))):
+			errors.append(effect_path + " có tham số khoảng cách phụ kiện không hợp lệ.")
+			valid = false
 		if effect.get("effect_id") == "aoe_response_damage":
 			if card["category"] != "tool" or card["effects"].size() != 1 or not AoeResolution.valid_parameters(params):
 				errors.append(effect_path + " có cấu hình AOE không được hỗ trợ.")

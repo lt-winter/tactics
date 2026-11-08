@@ -17,7 +17,7 @@ static func run_all() -> void:
 
 static func setup(order: Array[int] = [1, 2, 3, 4]) -> CombatController:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var cards: Array[CardInstance] = []
 	for definition: Dictionary in database.get_all_cards():
 		for copy_index: int in range(6):
@@ -254,7 +254,7 @@ static func _test_schema() -> void:
 		assert(combat.respond_to_aoe(target_id).valid)
 	assert(combat.game_state.validate_state())
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var fixture_path: String = "res://__aoe_schema_%d.json" % Time.get_ticks_usec()
 	for parameters: Dictionary in [{"target_scope": "single", "response_effect": "block_attack", "damage": 1}, {"target_scope": "all_other_players", "response_effect": "restore_hp", "damage": 1}, {"target_scope": "all_other_players", "response_effect": "deal_attack", "damage": 1.5}]:
 		var definition: Dictionary = database.get_card("gatling")

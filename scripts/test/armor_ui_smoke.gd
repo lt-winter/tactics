@@ -20,7 +20,7 @@ func _run() -> void:
 	await _click("Card%d" % armor.instance_id)
 	await _click("ActionConfirm")
 	assert(_ui.combat.get_defense(1) == armor and _ui._last_played_card_id == armor.instance_id)
-	assert((_ui.find_child("Seat1", true, false) as Button).text.contains(armor.definition.display_name))
+	assert((_ui.find_child("Seat1", true, false) as PlayerFrame).get_display_text().contains(armor.definition.display_name))
 	var helmet: CardInstance = AoeSystemTest.give(_ui.combat, 1, "helmet")
 	_ui._refresh()
 	await _click("Card%d" % helmet.instance_id)
@@ -31,7 +31,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var enemy_seat: Button = _ui.find_child("Seat2", true, false) as Button
-	assert(enemy_seat.text.contains(enemy_helmet.definition.display_name))
+	assert((enemy_seat as PlayerFrame).get_display_text().contains(enemy_helmet.definition.display_name))
 	assert((_ui.find_child("BotTable", true, false) as Control).get_global_rect().encloses(enemy_seat.get_global_rect()))
 	_fixture("barrel")
 	var dodge: CardInstance = AoeSystemTest.give(_ui.combat, 2, "dodge")

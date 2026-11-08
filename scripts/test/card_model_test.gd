@@ -6,7 +6,7 @@ extends RefCounted
 static func run_all() -> void:
 	var database := CardDatabase.new()
 
-	if not database.load_from_file("res://data/cards.json"):
+	if not database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH):
 		for error in database.get_errors():
 			push_error(error)
 		return

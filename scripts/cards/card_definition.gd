@@ -2,7 +2,7 @@
 class_name CardDefinition
 extends RefCounted
 
-const EQUIPMENT_SLOTS: Array[String] = ["weapon", "armor"]
+const EQUIPMENT_SLOTS: Array[String] = ["weapon", "armor", "offensive_accessory", "defensive_accessory"]
 
 var id: String
 var display_name: String

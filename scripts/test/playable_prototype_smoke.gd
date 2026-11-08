@@ -45,7 +45,7 @@ func _run() -> void:
 	var log_panel: Control = _ui.find_child("EventLogPanel", true, false) as Control
 	assert(log_panel.get_global_rect().position.x >= bot_table.get_global_rect().end.x)
 	assert(log_panel.get_global_rect().end.y <= human_panel.get_global_rect().position.y)
-	assert(human_seat.text.contains("♥♥♥♥") and not human_seat.text.contains("HP "))
+	assert((human_seat as PlayerFrame).get_display_text().contains("♥♥♥♥") and not (human_seat as PlayerFrame).get_display_text().contains("HP "))
 	var visible_card: CardInstance = null
 	for card: CardInstance in _ui.game_state.get_player(1).hand:
 		if _ui._can_select_card(1, card):
@@ -389,7 +389,7 @@ func _test_weapon_equip() -> void:
 	_press("ActionConfirm")
 	assert(_ui.combat.get_weapon(1) == crossbow)
 	assert(_ui.game_state.get_player(1).get_hand_count() == hand_before - 1)
-	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Nỏ thần · Tầm 1"))
+	assert((_ui.find_child("Seat1", true, false) as PlayerFrame).get_display_text().contains("Tầm 1 · Nỏ thần"))
 	_select_human_attack()
 	_press("Seat2")
 	_press("ActionConfirm")
@@ -404,7 +404,7 @@ func _test_weapon_equip() -> void:
 	_press("ActionConfirm")
 	assert(_ui.combat.get_weapon(1) == rifle)
 	assert(_ui.game_state.deck.discard_pile.has(crossbow))
-	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("Súng trường · Tầm 5"))
+	assert((_ui.find_child("Seat1", true, false) as PlayerFrame).get_display_text().contains("Tầm 5 · Súng trường"))
 	assert(not (_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("chưa được triển khai"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Nỏ thần"))
 	assert((_ui.find_child("EventLog", true, false) as RichTextLabel).text.contains("P1 bỏ: Tấn công"))
@@ -616,7 +616,7 @@ func _test_hidden_tools() -> void:
 		assert(_ui.combat.get_weapon(2) == equipment)
 		_press("ChoiceConfirm")
 		assert(_ui.combat.get_weapon(2) == null)
-		assert(not (_ui.find_child("Seat2", true, false) as Button).text.contains("Tầm"))
+		assert(not (_ui.find_child("Seat2", true, false) as PlayerFrame).get_display_text().contains("Tầm"))
 		assert(not _ui.combat.executor.validator.rule_engine.get_rule("attack_limit_per_turn", {}, RuleContext.new(2))["unlimited"])
 		assert(_ui.game_state.validate_state())
 
@@ -658,7 +658,7 @@ func _test_disabled_cards_and_seats() -> void:
 	assert(_ui.combat.executor.resolver.deal_damage(1, 1))
 	_ui._refresh()
 	assert(not (_ui.find_child("Card%d" % heal.instance_id, true, false) as Button).disabled)
-	assert((_ui.find_child("Seat1", true, false) as Button).text.contains("♥♥♥♡"))
+	assert((_ui.find_child("Seat1", true, false) as PlayerFrame).get_display_text().contains("♥♥♥♡"))
 	_press("EndTurn")
 	assert(_ui.combat.turn_manager.current_phase == TurnManager.Phase.DISCARD)
 	assert(not (_ui.find_child("Card%d" % dodge.instance_id, true, false) as Button).disabled)
@@ -673,7 +673,7 @@ func _test_disabled_cards_and_seats() -> void:
 	assert(_ui._choice_kind == "dying")
 	_press("ChoiceCancel")
 	var eliminated_seat: Button = _ui.find_child("Seat2", true, false) as Button
-	assert(eliminated_seat.disabled and eliminated_seat.text.contains("Đã loại"))
+	assert(eliminated_seat.disabled and (eliminated_seat as PlayerFrame).get_display_text().contains("Đã loại"))
 	assert(_ui.selected_target_id == 0)
 	await _click("Seat2")
 	assert(_ui.selected_target_id == 0)

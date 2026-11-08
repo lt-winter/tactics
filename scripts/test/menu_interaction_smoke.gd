@@ -29,7 +29,7 @@ func _run() -> void:
 			assert(player.display_name == "P%d" % player_id)
 			assert(player.get_hand_count() == (6 if player_id == 1 else 4))
 			var seat: Button = _ui.find_child("Seat%d" % player_id, true, false) as Button
-			assert(not seat.text.contains("Phòng ngự:") and not seat.text.contains("Tầm"))
+			assert(not (seat as PlayerFrame).get_display_text().contains("Phòng ngự:") and not (seat as PlayerFrame).get_display_text().contains("Tầm"))
 		await process_frame
 		for first: int in range(1, _ui._seats.size()):
 			for second: int in range(first + 1, _ui._seats.size()):

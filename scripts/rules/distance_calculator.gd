@@ -43,7 +43,7 @@ static func calculate(
 	var count: int = seated_players.size()
 	var direct_distance: int = abs(from_index - to_index)
 
-	return mini(
-		direct_distance,
-		count - direct_distance
-	)
+	var base_distance: int = mini(direct_distance, count - direct_distance)
+	var outgoing: int = AccessoryEffects.modifier(seated_players[from_index], "outgoing")
+	var incoming: int = AccessoryEffects.modifier(seated_players[to_index], "incoming")
+	return maxi(1, base_distance + outgoing + incoming)

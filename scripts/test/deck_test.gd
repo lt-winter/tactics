@@ -7,8 +7,8 @@ static func run_all() -> void:
 	var card_db: CardDatabase = CardDatabase.new()
 
 	assert(
-		card_db.load_from_file("res://data/cards.json"),
-		"Không thể nạp cards.json"
+		card_db.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH),
+		"Không thể nạp cards_manifest.json"
 	)
 
 	var deck_db: DeckDatabase = DeckDatabase.new(card_db)

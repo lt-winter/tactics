@@ -13,7 +13,7 @@ func _run() -> void:
 	root.add_child(_ui)
 	await process_frame
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	for count: int in range(2, 7):
 		_ui._new_table(count)
 		_ui.combat = SupportToolsTest._small("exchange", 16, count)

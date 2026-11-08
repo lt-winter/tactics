@@ -5,7 +5,7 @@ extends RefCounted
 
 static func run_all() -> void:
 	var card_db: CardDatabase = CardDatabase.new()
-	assert(card_db.load_from_file("res://data/cards.json"))
+	assert(card_db.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 
 	var deck_db: DeckDatabase = DeckDatabase.new(card_db)
 	assert(
@@ -202,7 +202,7 @@ static func run_all() -> void:
 
 static func _test_equipment() -> void:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var ids: Array[String] = ["crossbow", "butchers_knife", "slingshot", "pistol", "rifle", "crossbow", "attack", "attack", "attack", "discard", "steal"]
 	var cards: Array[CardInstance] = []
 	for index: int in range(ids.size()):
@@ -299,7 +299,7 @@ static func _test_equipment() -> void:
 
 static func _test_heal_card() -> void:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var decks: DeckDatabase = DeckDatabase.new(database)
 	assert(decks.load_from_file("res://data/decks/standard.json"))
 	var cards: Array[CardInstance] = decks.create_instances()
@@ -364,7 +364,7 @@ static func _test_tool_actions() -> void:
 	for effect_id: String in ["discard", "steal_card"]:
 		for zone: String in ["hand", "equipment", "judgment"]:
 			var database: CardDatabase = CardDatabase.new()
-			assert(database.load_from_file("res://data/cards.json"))
+			assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 			var decks: DeckDatabase = DeckDatabase.new(database)
 			assert(decks.load_from_file("res://data/decks/standard.json"))
 			var cards: Array[CardInstance] = decks.create_instances()

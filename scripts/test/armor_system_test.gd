@@ -295,7 +295,7 @@ static func _test_interruptions_and_cost_failure() -> void:
 	assert(not combat.resolve_armor(2, int(pending["decision_id"]), true).valid)
 	# A real transfer failure must neither discard the armor nor prevent/pay the hit.
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var cards: Array[CardInstance] = [CardInstance.new(1, database.get_definition("attack"), CardInstance.Suit.HEARTS, 1), CardInstance.new(2, database.get_definition("chainmail"), CardInstance.Suit.CLUBS, 2)]
 	var players: Array[Player] = [Player.new(1, "P1", 4), Player.new(2, "P2", 1), Player.new(3, "P3", 4)]
 	var state: GameState = GameState.new(cards, players)

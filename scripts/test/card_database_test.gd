@@ -7,7 +7,7 @@ static func run_all() -> void:
 	var database := CardDatabase.new()
 
 	var loaded := database.load_from_file(
-        "res://data/cards.json"
+		CardDatabase.DEFAULT_MANIFEST_PATH
 	)
 
 	if not loaded:
@@ -20,13 +20,18 @@ static func run_all() -> void:
 
 	print("=== CARD DATABASE TEST ===")
 
-	var source: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/cards.json"))
-	assert(source is Dictionary and source.get("cards") is Array)
-	var definitions: Array = source["cards"]
+	var source: Variant = JSON.parse_string(FileAccess.get_file_as_string(CardDatabase.DEFAULT_MANIFEST_PATH))
+	assert(source is Dictionary and source.get("files") is Array)
+	var definitions: Array = []
+	for path: String in source["files"]:
+		var group: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		assert(group is Dictionary and group.get("cards") is Array)
+		definitions.append_array(group["cards"])
 	assert(not definitions.is_empty() and database.get_card_count() == definitions.size())
 	for definition: Dictionary in definitions:
 		var loaded_definition: CardDefinition = database.get_definition(str(definition["id"]))
 		assert(loaded_definition != null and loaded_definition.display_name == definition["name"])
+		assert(database.get_card(str(definition["id"])) == definition)
 	assert(database.get_definition("draw_2").has_effect("draw_cards"))
 	assert(database.get_definition("exchange").has_effect("draw_cards"))
 	assert(database.get_definition("saloon").has_effect("heal_all_players"))

@@ -1,0 +1,216 @@
+{
+  "cards": [
+    {
+      "id": "crossbow",
+      "name": "Nỏ thần",
+      "category": "equipment",
+      "subcategory": "weapon",
+      "description": "Trong giai đoạn hành động, không giới hạn số lần sử dụng [Tấn Công].",
+      "equipment_slot": "weapon",
+      "range": 1,
+      "effects": [
+        {
+          "effect_id": "remove_attack_limit",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "id": "butchers_knife",
+      "name": "Dao phây",
+      "category": "equipment",
+      "subcategory": "weapon",
+      "description": "Khi [Tấn Công] chuẩn bị gây sát thương, có thể ngăn sát thương này và thay bằng việc chọn bỏ lần lượt tối đa 2 lá trên tay mục tiêu. Nếu mục tiêu chỉ có 1 lá thì bỏ 1 lá.",
+      "equipment_slot": "weapon",
+      "range": 2,
+      "effects": [
+        {
+          "effect_id": "replace_attack_damage_with_discard",
+          "parameters": {
+            "discard_count": 2,
+            "optional": true,
+            "selection": "attacker",
+            "selection_mode": "sequential",
+            "target_zone": "hand",
+            "allow_partial": true,
+            "min_target_cards": 1,
+            "reveal_before_selection": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "slingshot",
+      "name": "Ná cao su",
+      "category": "equipment",
+      "subcategory": "weapon",
+      "description": "Sau khi [Tấn Công] gây sát thương thành công, có thể bỏ 1 lá trên tay mình để gây 1 sát thương cho một người chơi khác trong tầm 1 của mục tiêu.",
+      "equipment_slot": "weapon",
+      "range": 3,
+      "effects": [
+        {
+          "effect_id": "secondary_damage_on_hit",
+          "parameters": {
+            "cost_discard": 1,
+            "cost_zone": "hand",
+            "cost_owner": "damage_source",
+            "secondary_damage": 1,
+            "secondary_range": 1,
+            "range_origin": "primary_target",
+            "exclude_primary_target": true,
+            "optional": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "pistol",
+      "name": "Súng lục",
+      "category": "equipment",
+      "subcategory": "weapon",
+      "description": "Khi sử dụng [Tấn Công], có thể chọn thêm 1 mục tiêu hợp lệ trong tầm đánh.",
+      "equipment_slot": "weapon",
+      "range": 4,
+      "effects": [
+        {
+          "effect_id": "additional_attack_target",
+          "parameters": {
+            "additional_targets": 1,
+            "optional": true,
+            "unique_targets": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "rifle",
+      "name": "Súng trường",
+      "category": "equipment",
+      "subcategory": "weapon",
+      "description": "Sau khi [Tấn Công] gây sát thương thành công, có thể chọn bỏ 1 trang bị của mục tiêu.",
+      "equipment_slot": "weapon",
+      "range": 5,
+      "effects": [
+        {
+          "effect_id": "discard_equipment_on_hit",
+          "parameters": {
+            "discard_count": 1,
+            "target_zone": "equipment",
+            "selection": "attacker",
+            "optional": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "black_shield",
+      "name": "Khiên đen",
+      "category": "equipment",
+      "subcategory": "armor",
+      "description": "Nội tại: Khi là mục tiêu của lá [Tấn Công] màu đen (Bích, Chuồn), vô hiệu hóa đòn tấn công đó đối với bản thân.",
+      "equipment_slot": "armor",
+      "effects": [
+        {
+          "effect_id": "negate_attack_by_color",
+          "parameters": {
+            "colors": ["black"],
+            "trigger": "on_attack_targeted",
+            "optional": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "barrel",
+      "name": "Thùng rượu",
+      "category": "equipment",
+      "subcategory": "armor",
+      "description": "Khi bị [Tấn Công], có thể phán xét một lần. Nếu ra Cơ (♥), xem như đã sử dụng [Né tránh].",
+      "equipment_slot": "armor",
+      "effects": [
+        {
+          "effect_id": "judgment_dodge",
+          "parameters": {
+            "trigger": "before_attack_response",
+            "success_suit": "hearts",
+            "optional": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "helmet",
+      "name": "Nón bảo hiểm",
+      "category": "equipment",
+      "subcategory": "armor",
+      "description": "Nội tại: Khi nhận sát thương lớn hơn 1, giảm sát thương đó xuống còn 1.",
+      "equipment_slot": "armor",
+      "effects": [
+        {
+          "effect_id": "cap_incoming_damage",
+          "parameters": {
+            "trigger": "before_damage",
+            "threshold": 1,
+            "max_damage": 1,
+            "optional": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "chainmail",
+      "name": "Giáp lưới",
+      "category": "equipment",
+      "subcategory": "armor",
+      "description": "Khi chuẩn bị nhận sát thương kết liễu, có thể bỏ Giáp lưới để ngăn toàn bộ sát thương.",
+      "equipment_slot": "armor",
+      "effects": [
+        {
+          "effect_id": "prevent_lethal_damage",
+          "parameters": {
+            "trigger": "before_damage",
+            "cost": {
+              "type": "discard_self_equipment"
+            },
+            "prevent_damage": "all",
+            "optional": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "scope",
+      "name": "Ống ngắm",
+      "category": "equipment",
+      "subcategory": "accessory",
+      "description": "Khoảng cách từ bạn đến người chơi khác giảm 1, tối thiểu bằng 1.",
+      "equipment_slot": "offensive_accessory",
+      "effects": [
+        {
+          "effect_id": "modify_distance",
+          "parameters": {
+            "direction": "outgoing",
+            "amount": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "mustang",
+      "name": "Ngựa",
+      "category": "equipment",
+      "subcategory": "accessory",
+      "description": "Khoảng cách từ người chơi khác đến bạn tăng 1.",
+      "equipment_slot": "defensive_accessory",
+      "effects": [
+        {
+          "effect_id": "modify_distance",
+          "parameters": {
+            "direction": "incoming",
+            "amount": 1
+          }
+        }
+      ]
+    }
+  ]
+}

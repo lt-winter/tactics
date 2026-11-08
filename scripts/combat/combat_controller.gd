@@ -39,6 +39,18 @@ func equip_weapon(actor_id: int, card_id: int) -> ActionResult:
 	return executor.equip_weapon(actor_id, card_id)
 
 
+func equip_accessory(actor_id: int, card_id: int) -> ActionResult:
+	return executor.equip_accessory(actor_id, card_id)
+
+
+func get_accessory(player_id: int, slot: String) -> CardInstance:
+	return executor.equipment_system.get_equipment(player_id, slot) if slot in AccessoryEffects.SLOTS else null
+
+
+func get_effective_distance(from_id: int, to_id: int) -> int:
+	return DistanceCalculator.calculate(game_state.players, from_id, to_id, turn_manager.seat_order)
+
+
 func equip_armor(actor_id: int, card_id: int) -> ActionResult:
 	return executor.equip_armor(actor_id, card_id)
 

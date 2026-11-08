@@ -7,7 +7,7 @@ static func run_all() -> void:
 	var card_db := CardDatabase.new()
 
 	assert(
-		card_db.load_from_file("res://data/cards.json")
+		card_db.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH)
 	)
 
 	var deck_db := DeckDatabase.new(card_db)

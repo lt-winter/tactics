@@ -36,6 +36,15 @@ func get_equipment(player_id: int, slot: String) -> CardInstance:
 func commit_equip(player_id: int, card_id: int, slot: String = "weapon") -> ActionResult:
 	if slot not in CardDefinition.EQUIPMENT_SLOTS:
 		return ActionResult.failure("Slot trang bị không hợp lệ.")
+	var player: Player = game_state.get_player(player_id)
+	if player == null:
+		return ActionResult.failure("Người sở hữu trang bị không hợp lệ.")
+	var selected: CardInstance = null
+	for card: CardInstance in player.hand:
+		if card.instance_id == card_id:
+			selected = card
+	if selected == null or not selected.definition.has_equipment_slot() or selected.definition.equipment_slot != slot:
+		return ActionResult.failure("Trang bị không phù hợp với ô đã yêu cầu.")
 	var moves: Array[Dictionary] = []
 	var old_weapon: CardInstance = get_equipment(player_id, slot)
 	if old_weapon != null:

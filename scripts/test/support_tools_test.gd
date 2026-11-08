@@ -43,7 +43,7 @@ static func _test_exchange_can_discard_equipment() -> void:
 	combat = _small("exchange", 2)
 	# Use owned hand/equipment fixtures without creating any additional instance.
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	for remaining: CardInstance in combat.game_state.deck.draw_pile:
 		remaining.definition = database.get_definition("crossbow" if remaining.instance_id == 2 else "dodge")
 	assert(combat.game_state.zone_manager.transfer_card(2, "draw", 0, "hand", 1))
@@ -97,7 +97,7 @@ static func _test_draw_and_exchange() -> void:
 
 static func _small(definition_id: String, extra_cards: int, player_count: int = 2) -> CombatController:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var cards: Array[CardInstance] = [CardInstance.new(1, database.get_definition(definition_id), CardInstance.Suit.HEARTS, 1)]
 	for index: int in range(extra_cards):
 		cards.append(CardInstance.new(index + 2, database.get_definition("attack"), CardInstance.Suit.CLUBS, index % 13 + 1))
@@ -241,7 +241,7 @@ static func _test_schema_and_reentry() -> void:
 	assert(not SupportToolResolution.valid_effect({"effect_id": "heal_all_players", "parameters": {"amount": 2}}))
 	assert(not SupportToolResolution.valid_effect({"effect_id": "draw_cards", "parameters": {"count": 3, "discard_count": -1}}))
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var fixture: String = "res://__support_schema_%d.json" % Time.get_ticks_usec()
 	for bad: Variant in [0, true, "3", null, 1.5]:
 		var definition: Dictionary = database.get_card("exchange")

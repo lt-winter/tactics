@@ -92,6 +92,16 @@ func equip_weapon(actor_id: int, card_id: int) -> ActionResult:
 	return equipment_system.commit_equip(actor_id, card_id)
 
 
+func equip_accessory(actor_id: int, card_id: int) -> ActionResult:
+	var validation: ActionResult = validator.validate_equip_accessory(actor_id, card_id)
+	if not validation.valid:
+		return validation
+	for card: CardInstance in game_state.get_player(actor_id).hand:
+		if card.instance_id == card_id:
+			return equipment_system.commit_equip(actor_id, card_id, card.definition.equipment_slot)
+	return ActionResult.failure("Phụ kiện không còn trên tay.")
+
+
 func equip_armor(actor_id: int, card_id: int) -> ActionResult:
 	var validation: ActionResult = validator.validate_equip_armor(actor_id, card_id)
 	if not validation.valid:

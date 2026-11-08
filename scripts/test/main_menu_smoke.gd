@@ -18,7 +18,7 @@ func _run() -> void:
 	assert(ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/main_menu.tscn")
 	assert((_menu.find_child("Play", true, false) as Button).is_visible_in_tree())
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	for visit: int in range(2):
 		await _click("CardCatalog")
 		var entries: VBoxContainer = _menu.find_child("CatalogEntries", true, false) as VBoxContainer

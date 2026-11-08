@@ -17,7 +17,7 @@ static func run_all() -> void:
 
 static func _create_combat(target_hp: int) -> CombatController:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var attack: CardDefinition = database.get_definition("attack")
 	var dodge: CardDefinition = database.get_definition("dodge")
 	var heal: CardDefinition = database.get_definition("heal")

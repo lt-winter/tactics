@@ -1,6 +1,6 @@
 {
   "cards": [
-	{
+{
 	  "id": "attack",
 	  "name": "Tấn công",
 	  "category": "basic",
@@ -15,7 +15,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "dodge",
 	  "name": "Né tránh",
 	  "category": "basic",
@@ -28,7 +28,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "heal",
 	  "name": "Hồi máu",
 	  "category": "basic",
@@ -43,7 +43,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "discard",
 	  "name": "Hủy bài",
 	  "category": "tool",
@@ -59,7 +59,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "steal",
 	  "name": "Cướp bài",
 	  "category": "tool",
@@ -76,7 +76,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "crossbow",
 	  "name": "Nỏ thần",
 	  "category": "equipment",
@@ -91,7 +91,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "butchers_knife",
 	  "name": "Dao phây",
 	  "category": "equipment",
@@ -115,7 +115,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "slingshot",
 	  "name": "Ná cao su",
 	  "category": "equipment",
@@ -139,7 +139,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "pistol",
 	  "name": "Súng lục",
 	  "category": "equipment",
@@ -158,7 +158,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "rifle",
 	  "name": "Súng trường",
 	  "category": "equipment",
@@ -178,7 +178,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "gatling",
 	  "name": "Xả đạn",
 	  "category": "tool",
@@ -195,7 +195,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "indian",
 	  "name": "Thổ dân",
 	  "category": "tool",
@@ -212,7 +212,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "draw_2",
 	  "name": "Rút 2 lá",
 	  "category": "tool",
@@ -220,7 +220,7 @@
 	  "description": "Trong giai đoạn sử dụng bài của mình, rút 2 lá.",
 	  "effects": [{ "effect_id": "draw_cards", "parameters": { "count": 2 } }]
 	},
-	{
+{
 	  "id": "exchange",
 	  "name": "Trao đổi",
 	  "category": "tool",
@@ -237,7 +237,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "saloon",
 	  "name": "Cứu trợ",
 	  "category": "tool",
@@ -247,7 +247,7 @@
 		{ "effect_id": "heal_all_players", "parameters": { "amount": 1 } }
 	  ]
 	},
-	{
+{
 	  "id": "black_shield",
 	  "name": "Khiên đen",
 	  "category": "equipment",
@@ -265,7 +265,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "barrel",
 	  "name": "Thùng rượu",
 	  "category": "equipment",
@@ -283,7 +283,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "helmet",
 	  "name": "Nón bảo hiểm",
 	  "category": "equipment",
@@ -302,7 +302,7 @@
 		}
 	  ]
 	},
-	{
+{
 	  "id": "chainmail",
 	  "name": "Giáp lưới",
 	  "category": "equipment",
@@ -322,6 +322,40 @@
 		  }
 		}
 	  ]
+	},
+{
+  "id": "scope",
+  "name": "Ống ngắm",
+  "category": "equipment",
+  "subcategory": "accessory",
+  "description": "Khoảng cách từ bạn đến người chơi khác giảm 1, tối thiểu bằng 1.",
+  "equipment_slot": "offensive_accessory",
+  "effects": [
+	{
+	  "effect_id": "modify_distance",
+	  "parameters": {
+		"direction": "outgoing",
+		"amount": -1
+	  }
 	}
+  ]
+},
+{
+  "id": "mustang",
+  "name": "Ngựa",
+  "category": "equipment",
+  "subcategory": "accessory",
+  "description": "Khoảng cách từ người chơi khác đến bạn tăng 1.",
+  "equipment_slot": "defensive_accessory",
+  "effects": [
+	{
+	  "effect_id": "modify_distance",
+	  "parameters": {
+		"direction": "incoming",
+		"amount": 1
+	  }
+	}
+  ]
+}
   ]
 }

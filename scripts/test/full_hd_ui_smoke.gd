@@ -24,8 +24,8 @@ func _run() -> void:
 		assert(hand.get_global_rect().position.y >= board.get_global_rect().end.y)
 		assert(hand.get_global_rect().end.y <= 1080.0)
 		for seat: Button in _ui._seats:
-			assert(not seat.text.contains("Tầm") and not seat.text.contains("Vũ khí:"))
-			assert(not seat.text.contains("Phòng ngự:"))
+			assert(not (seat as PlayerFrame).get_display_text().contains("Tầm") and not (seat as PlayerFrame).get_display_text().contains("Vũ khí:"))
+			assert(not (seat as PlayerFrame).get_display_text().contains("Phòng ngự:"))
 			assert(seat.get_theme_font_size("font_size") == 13)
 		for node: Node in _ui.find_children("*", "Label", true, false):
 			assert(not (node as Label).text.contains("Ngược chiều kim đồng hồ:"))
@@ -38,11 +38,11 @@ func _run() -> void:
 	assert(_ui.combat.equip_weapon(1, weapon.instance_id).valid)
 	_ui._refresh()
 	var own_seat: Button = _ui.find_child("Seat1", true, false) as Button
-	assert(own_seat.text.contains(weapon.definition.display_name + " · Tầm"))
-	assert(not (_ui.find_child("Seat2", true, false) as Button).text.contains("Tầm"))
+	assert((own_seat as PlayerFrame).get_display_text().contains("Tầm " + str(weapon.definition.attack_range) + " · " + weapon.definition.display_name))
+	assert(not (_ui.find_child("Seat2", true, false) as PlayerFrame).get_display_text().contains("Tầm"))
 	assert(_ui.game_state.zone_manager.transfer_card(weapon.instance_id, "equipment", 1, "discard", 0))
 	_ui._refresh()
-	assert(not own_seat.text.contains("Tầm") and not own_seat.text.contains(weapon.definition.display_name))
+	assert(not (own_seat as PlayerFrame).get_display_text().contains("Tầm") and not (own_seat as PlayerFrame).get_display_text().contains(weapon.definition.display_name))
 	var cancel: Button = _ui.find_child("ActionCancel", true, false) as Button
 	_ui._feedback.text = ""
 	await process_frame

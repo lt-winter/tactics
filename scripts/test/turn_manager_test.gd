@@ -6,8 +6,8 @@ extends RefCounted
 static func run_all() -> void:
 	var card_db: CardDatabase = CardDatabase.new()
 
-	if not card_db.load_from_file("res://data/cards.json"):
-		push_error("Không thể nạp cards.json")
+	if not card_db.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH):
+		push_error("Không thể nạp cards_manifest.json")
 		return
 
 	var deck_db: DeckDatabase = DeckDatabase.new(card_db)
@@ -113,7 +113,7 @@ static func _test_opening_draws() -> void:
 
 static func _fixture(count: int = 4, draws: int = 0, reverse_storage: bool = false) -> CombatController:
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var decks: DeckDatabase = DeckDatabase.new(database)
 	assert(decks.load_from_file("res://data/decks/standard.json"))
 	var players: Array[Player] = []

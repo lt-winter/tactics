@@ -122,6 +122,38 @@
 	{
 	  "card_id": "saloon",
 	  "copies": [{ "suit": 0, "rank": 1 }]
+	},
+	{
+	  "card_id": "black_shield",
+	  "copies": [{ "suit": 2, "rank": 2 }]
+	},
+	{
+	  "card_id": "barrel",
+	  "copies": [{ "suit": 3, "rank": 2 }]
+	},
+	{
+	  "card_id": "helmet",
+	  "copies": [{ "suit": 2, "rank": 1 }]
+	},
+	{
+	  "card_id": "chainmail",
+	  "copies": [{ "suit": 2, "rank": 2 }]
+	},
+	{
+	  "card_id": "scope",
+	  "copies": [
+		{ "suit": 0, "rank": 5 },
+		{ "suit": 1, "rank": 13 },
+		{ "suit": 3, "rank": 13 }
+	  ]
+	},
+	{
+	  "card_id": "mustang",
+	  "copies": [
+		{ "suit": 0, "rank": 13 },
+		{ "suit": 3, "rank": 5 },
+		{ "suit": 3, "rank": 13 }
+	  ]
 	}
   ]
 }

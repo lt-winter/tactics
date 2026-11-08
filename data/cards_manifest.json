@@ -1,0 +1,7 @@
+{
+	"files": [
+		"res://data/cards/basic.json",
+		"res://data/cards/tools.json",
+		"res://data/cards/equipment.json"
+	]
+}

@@ -88,7 +88,7 @@ static func _test_aoe_and_final_kill() -> void:
 	assert(combat.game_state.validate_state())
 	# Empty draw pile recycles the victim's discarded cards without creating copies.
 	var database: CardDatabase = CardDatabase.new()
-	assert(database.load_from_file("res://data/cards.json"))
+	assert(database.load_from_file(CardDatabase.DEFAULT_MANIFEST_PATH))
 	var victim_cards: Array[CardInstance] = [CardInstance.new(1, database.get_definition("heal"), CardInstance.Suit.HEARTS, 1)]
 	var state: GameState = GameState.new(victim_cards, [Player.new(1, "P1", 4), Player.new(2, "P2", 4)])
 	var rules: RuleEngine = RuleEngine.new()
